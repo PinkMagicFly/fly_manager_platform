@@ -1,0 +1,32 @@
+services:
+  mysql:
+    image: mysql:8.0.36
+    container_name: soarcloud-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "root"
+      MYSQL_DATABASE: soarcloud_lae
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+      - --default-authentication-plugin=mysql_native_password
+      - --lower_case_table_names=1
+    ports:
+      - "3306:3306"
+    volumes:
+      - D:/docker-data/mysql:/var/lib/mysql
+      - D:/java/project/school-1/fly_manager_platform/sql/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - D:/java/project/school-1/fly_manager_platform/sql/init-data.sql:/docker-entrypoint-initdb.d/02_init_data.sql
+
+  redis:
+    image: redis:7-alpine
+    container_name: soarcloud-redis
+    restart: always
+    environment:
+      TZ: Asia/Shanghai
+    ports:
+      - "16379:6379"
+    volumes:
+      - D:/docker-data/redis:/data
+    command: redis-server --appendonly yes
