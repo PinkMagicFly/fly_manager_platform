@@ -1,42 +1,41 @@
 <template>
-  <div class="m-profile">
-    <div class="user-card">
-      <div class="avatar">{{ user?.loginName?.charAt(0)?.toUpperCase() || 'U' }}</div>
-      <div class="u-info">
-        <h3>{{ user?.loginName }}</h3>
-        <p class="role-badge">{{ roleName }}</p>
-      </div>
-    </div>
+  <view class="m-profile">
+    <view class="user-card">
+      <view class="avatar">{{ user?.loginName?.charAt(0)?.toUpperCase() || 'U' }}</view>
+      <view class="u-info">
+        <text class="u-name">{{ user?.loginName }}</text>
+        <text class="role-badge">{{ roleName }}</text>
+      </view>
+    </view>
 
-    <div class="list-card">
-      <div class="list-item">
-        <span class="lbl">绑定手机</span>
-        <span class="val">{{ user?.mobile || '138****0000' }}</span>
-      </div>
-      <div class="list-item">
-        <span class="lbl">实名资质状态</span>
-        <span class="val text-success">✓ 已实名认证</span>
-      </div>
-      <div class="list-item">
-        <span class="lbl">终端自适应模式</span>
-        <span class="val text-primary">移动端弱网轻量 (Client-Kind: app)</span>
-      </div>
-      <div class="list-item">
-        <span class="lbl">弱网离线队列</span>
-        <span class="val">0 条待同步</span>
-      </div>
-    </div>
+    <view class="list-card">
+      <view class="list-item">
+        <text class="lbl">绑定手机</text>
+        <text class="val">{{ user?.mobile || '138****0000' }}</text>
+      </view>
+      <view class="list-item">
+        <text class="lbl">实名资质状态</text>
+        <text class="val text-success">✓ 已实名认证</text>
+      </view>
+      <view class="list-item">
+        <text class="lbl">终端自适应模式</text>
+        <text class="val text-primary">UniApp 轻量 (Client-Kind: app)</text>
+      </view>
+      <view class="list-item">
+        <text class="lbl">弱网离线暂存队列</text>
+        <text class="val">0 条待同步</text>
+      </view>
+    </view>
 
     <button class="logout-btn" @click="handleLogout">退出当前作业会话</button>
-  </div>
+  </view>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import request from '@/utils/request'
+import { ref, computed } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import request from '../../utils/request'
 
-const router = useRouter()
 const user = ref<any>(null)
 
 const roleName = computed(() => {
@@ -47,15 +46,17 @@ const roleName = computed(() => {
   return '货运客户'
 })
 
-onMounted(async () => {
-  const cached = localStorage.getItem('soarcloud_mobile_user')
+onLoad(async () => {
+  const cached = uni.getStorageSync('soarcloud_mobile_user')
   if (cached) {
-    user.value = JSON.parse(cached)
+    try {
+      user.value = JSON.parse(cached)
+    } catch (e) {}
   }
   try {
     const fresh: any = await request.get('/api/v1/auth/current-user')
     user.value = fresh
-    localStorage.setItem('soarcloud_mobile_user', JSON.stringify(fresh))
+    uni.setStorageSync('soarcloud_mobile_user', JSON.stringify(fresh))
   } catch (e) {}
 })
 
@@ -63,9 +64,17 @@ const handleLogout = async () => {
   try {
     await request.post('/api/v1/auth/logout')
   } catch (e) {}
-  localStorage.removeItem('soarcloud_mobile_token')
-  localStorage.removeItem('soarcloud_mobile_user')
-  router.push('/login')
+  uni.removeStorageSync('soarcloud_mobile_token')
+  uni.removeStorageSync('soarcloud_mobile_user')
+  uni.showToast({
+    title: '已退出登录',
+    icon: 'none'
+  })
+  setTimeout(() => {
+    uni.reLaunch({
+      url: '/pages/login/index'
+    })
+  }, 400)
 }
 </script>
 
@@ -75,6 +84,7 @@ const handleLogout = async () => {
 }
 .user-card {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 16px;
   background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
@@ -86,24 +96,31 @@ const handleLogout = async () => {
 .avatar {
   width: 54px;
   height: 54px;
+  line-height: 54px;
+  text-align: center;
   background-color: #165dff;
   border-radius: 50%;
   font-size: 22px;
   font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: #fff;
 }
-.u-info h3 {
+.u-info {
+  display: flex;
+  flex-direction: column;
+}
+.u-name {
   font-size: 18px;
+  font-weight: bold;
+  color: #fff;
   margin-bottom: 4px;
 }
 .role-badge {
   font-size: 12px;
   background: rgba(255, 255, 255, 0.15);
+  color: #93c5fd;
   padding: 2px 8px;
   border-radius: 4px;
-  display: inline-block;
+  align-self: flex-start;
 }
 .list-card {
   background: #fff;
@@ -114,32 +131,37 @@ const handleLogout = async () => {
 }
 .list-item {
   display: flex;
+  flex-direction: row;
   justify-content: space-between;
+  align-items: center;
   padding: 16px;
   border-bottom: 1px solid #f1f5f9;
-  font-size: 14px;
-}
-.list-item:last-child {
-  border-bottom: none;
 }
 .lbl {
+  font-size: 14px;
   color: #64748b;
 }
 .val {
-  font-weight: 500;
+  font-size: 14px;
   color: #0f172a;
+  font-weight: 500;
 }
-.text-success { color: #10b981; }
-.text-primary { color: #165dff; }
+.text-success {
+  color: #10b981;
+}
+.text-primary {
+  color: #165dff;
+}
 .logout-btn {
   width: 100%;
   height: 44px;
+  line-height: 44px;
   background-color: #fee2e2;
   color: #ef4444;
   border: none;
   border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
 }
 </style>
+

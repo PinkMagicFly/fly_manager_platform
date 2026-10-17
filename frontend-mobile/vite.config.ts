@@ -1,16 +1,8 @@
 import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import { fileURLToPath, URL } from 'node:url'
+import uni from '@dcloudio/vite-plugin-uni'
 
 export default defineConfig({
-  base: './',
-
-  plugins: [vue()],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    }
-  },
+  plugins: [uni()],
   server: {
     port: 5174,
     host: '0.0.0.0',
@@ -22,3 +14,4 @@ export default defineConfig({
     }
   }
 })
+

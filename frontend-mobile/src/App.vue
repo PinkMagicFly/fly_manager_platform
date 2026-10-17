@@ -1,26 +1,27 @@
-<template>
-  <div class="mobile-layout">
-    <router-view />
-  </div>
-</template>
+<script setup lang="ts">
+import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
+
+onLaunch(() => {
+  console.log('App Launch: 翔云·低空智慧物流运营平台 移动作业端初始化')
+})
+onShow(() => {
+  console.log('App Show: 移动作业端前台运行')
+})
+onHide(() => {
+  console.log('App Hide: 移动作业端进入后台')
+})
+</script>
 
 <style>
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+/* UniApp 全局公共样式 */
+page {
   background-color: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: #1e293b;
   -webkit-font-smoothing: antialiased;
 }
-.mobile-layout {
-  max-width: 480px;
-  min-height: 100vh;
-  margin: 0 auto;
-  background-color: #ffffff;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+view, text, image, input, button {
+  box-sizing: border-box;
 }
 </style>
+
