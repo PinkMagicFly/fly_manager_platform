@@ -104,25 +104,31 @@ const rules = {
 
 const nextStep = async () => {
   if (!formRef.value) return
-  await formRef.value.validate((valid) => {
-    if (valid) activeStep.value++
-  })
+  if (activeStep.value === 0) {
+    try {
+      await formRef.value.validateField(['corpName', 'licenseNo', 'contactName', 'contactPhone'])
+      activeStep.value++
+    } catch (e) {
+      ElMessage.warning('请完整填写企业信息并输入合法的11位手机号')
+    }
+  } else if (activeStep.value === 1) {
+    activeStep.value++
+  }
 }
 
 const handleSubmit = async () => {
   if (!formRef.value) return
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
+  try {
+    await formRef.value.validate()
     submitting.value = true
-    try {
-      await request.post('/api/v1/merchant/apply', form)
-      ElMessage.success('提交入驻申请成功！')
-      activeStep.value = 3
-    } catch (e) {
-    } finally {
-      submitting.value = false
-    }
-  })
+    await request.post('/api/v1/merchant/apply', form)
+    ElMessage.success('提交入驻申请成功！')
+    activeStep.value = 3
+  } catch (e) {
+    ElMessage.warning('请检查并完整填写主账号登录名与密码（不少于6位）')
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
