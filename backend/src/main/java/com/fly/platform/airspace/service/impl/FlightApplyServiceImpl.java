@@ -106,12 +106,12 @@ public class FlightApplyServiceImpl implements FlightApplyService {
         );
 
         if (!validateResult.getPass() && "FORBIDDEN_ZONE".equals(validateResult.getConflictType())) {
-            throw new BusinessException(400, "申报航线违规穿越法定禁飞区，系统阻断申报，请使用避障纠偏航线重新填报！");
+            throw new BusinessException(400, "申报航线违规穿越法定禁飞区，系统阻断申报，请在地图上重新调整航路点避开禁飞区！");
         }
 
         FlightApply apply = new FlightApply();
         apply.setApplySn(generateApplySn());
-        apply.setOrderId(dto.getOrderId());
+        apply.setOrderId(dto.getOrderId() != null ? dto.getOrderId() : 0L);
         apply.setMerchantId(merchantId);
         apply.setUavId(dto.getUavId());
         apply.setPilotId(dto.getPilotId());

@@ -94,13 +94,6 @@
             <el-button type="primary" :loading="checking" @click="handleValidate">
               <el-icon><Aim /></el-icon> 毫秒级围栏碰撞检测
             </el-button>
-            <el-button
-              v-if="validationResult && !validationResult.pass && validationResult.suggestedRoute"
-              type="success"
-              @click="applySuggestedRoute"
-            >
-              <el-icon><RefreshRight /></el-icon> 一键采纳避障建议
-            </el-button>
           </div>
         </div>
 
@@ -109,15 +102,15 @@
             type="info"
             :closable="false"
             show-icon
-            :title="`📍 鼠标交互绘线：直接在下方高德地图上点击添加航路点（当前已规划 ${routePoints.length} 个航路点）。至少需标绘2个起降点。`"
+            :title="`📍 鼠标交互绘线：直接在下方高德地图上点击添加航路点（当前已规划 ${routePoints.length} 个航路点）。至少需标绘2个起降点。若穿越禁飞区红框将被系统拦截，需自主调整避让。`"
           />
         </div>
 
         <el-alert
           v-if="validationResult"
-          :title="validationResult.pass ? '空间碰撞检测通过' : '空间碰撞告警拦截'"
+          :title="validationResult.pass ? '空间碰撞检测通过（准予申报）' : '空间碰撞告警拦截（严禁申报）'"
           :type="validationResult.pass ? 'success' : 'error'"
-          :description="validationResult.message"
+          :description="validationResult.pass ? validationResult.message : `${validationResult.message}。请在地图上手动点击航路点绕开红框禁飞区，重新检测合格后方可提交！`"
           show-icon
           style="margin-bottom: 12px"
         />
@@ -370,17 +363,6 @@ const handleValidate = async () => {
     ElMessage.error(error.message || '碰撞校验失败')
   } finally {
     checking.value = false
-  }
-}
-
-const applySuggestedRoute = () => {
-  if (validationResult.value && validationResult.value.suggestedRoute) {
-    routePoints.value = validationResult.value.suggestedRoute
-    if (validationResult.value.suggestedAlt) {
-      form.value.altPlanned = validationResult.value.suggestedAlt
-    }
-    ElMessage.success('已采纳智能避障绕行航线建议！')
-    handleValidate()
   }
 }
 
