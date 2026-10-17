@@ -1,0 +1,60 @@
+-- H2 测试种子数据
+INSERT INTO uam_role (role_id, role_code, role_name, description) VALUES
+(1, 'ROLE_ADMIN', '平台超级管理员', '拥有全平台治理权限'),
+(2, 'ROLE_MERCHANT', '低空物流商户', '低空货运企业主账号'),
+(3, 'ROLE_ATC', '空管监察员', '空域合规监管部门'),
+(4, 'ROLE_PILOT', '无人机商用机长', '外场无人机执飞机长'),
+(5, 'ROLE_MAINTAINER', '场站运维专员', '负责无人机巡检维保'),
+(6, 'ROLE_CUSTOMER', '货运个人/企业客户', '拥有在线下单试算权限');
+
+INSERT INTO uam_account (account_id, login_name, mobile, email, pwd_digest, account_kind, status) VALUES
+(1, 'admin', '13800000001', 'admin@soarcloud.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 3, 1),
+(2, 'merchant_sf', '13800000002', 'service@sf-air.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1),
+(3, 'atc_officer', '13800000003', 'atc@caac-south.gov.cn', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 4, 1),
+(4, 'pilot_zhang', '13800000004', 'pilot_zhang@sf-air.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 5, 1),
+(5, 'maintain_li', '13800000005', 'maintain_li@soarcloud.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 6, 1),
+(6, 'customer_demo', '13800000006', 'customer@tencent.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 1, 1),
+(7, 'merchant_jd_sub', '13800000007', 'dispatch@jd-air.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1),
+(8, 'merchant_pending', '13800000008', 'biz@pending-cargo.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 0);
+
+INSERT INTO uam_account_role (account_id, role_id) VALUES
+(1, 1),
+(2, 2),
+(3, 3),
+(4, 4),
+(5, 5),
+(6, 6),
+(7, 2),
+(8, 2);
+
+INSERT INTO merchant_archive (merchant_id, account_id, corp_name, license_no, contact_name, contact_phone, airworthiness_cert, audit_state, audit_note) VALUES
+(1, 2, '深圳市丰翼低空物流科技有限公司', '91440300MA5EXXX123', '张经理', '13800000002', 'CAAC-CCAR92-2024-008', 1, '企业适航许可与空运承运资质完备，审核通过'),
+(2, 8, '翼联创新低空货运（深圳）有限公司', '91440300MA5EXXX999', '刘主管', '13800000008', 'CAAC-CCAR92-2024-P01', 0, '新商户入驻申请，待管理员资质审核');
+
+INSERT INTO customer_archive (customer_id, account_id, real_name, id_card, credit_limit, auth_state) VALUES
+(1, 6, '腾讯科技（深圳）低空物资部', '91440300708461136T', 50000.00, 1);
+
+-- 场站数据 (base_site)
+INSERT INTO base_site (site_id, site_code, site_name, site_geo, capacity, occupied, site_state) VALUES
+(1, 'SITE-SZ-001', '南山科技园低空综合起降枢纽', '113.943,22.540', 6, 2, 1),
+(2, 'SITE-SZ-002', '福田CBD深业上城楼顶起降场', '114.062,22.553', 4, 1, 1),
+(3, 'SITE-SZ-003', '龙岗大运智慧物流换电场站', '114.218,22.695', 8, 3, 1),
+(4, 'SITE-SZ-004', '盐田港综合保税区中转场站', '114.265,22.578', 4, 0, 1);
+
+-- 无人机台账 (uav_info)
+INSERT INTO uav_info (uav_id, uav_sn, model, merchant_id, max_load, max_range_km, battery_pct, health_score, fly_hours, state, home_site_id) VALUES
+(1, 'UAV-FY90-001', '顺丰丰舟-90 (垂起固定翼)', 1, 20.00, 65.0, 92, 98, 142, 0, 1),
+(2, 'UAV-FY90-002', '顺丰丰舟-90 (垂起固定翼)', 1, 20.00, 65.0, 85, 95, 110, 1, 1),
+(3, 'UAV-FC30-001', '大疆运载FC30 (八轴多旋翼)', 1, 30.00, 28.0, 100, 100, 45, 0, 2),
+(4, 'UAV-FC30-002', '大疆运载FC30 (八轴多旋翼)', 1, 30.00, 28.0, 40, 88, 260, 2, 2);
+
+-- 机组人员档案 (crew_staff)
+INSERT INTO crew_staff (crew_id, account_id, crew_type, real_name, license_no, license_expire, fly_hours, status) VALUES
+(1, 4, 1, '张志强', 'CAAC-UAV-20210988', '2028-12-31', 480, 1),
+(2, 5, 2, '李维保', 'MAINT-CERT-2022011', '2027-10-30', 0, 1);
+
+-- 系统参数 (sys_param)
+INSERT INTO sys_param (param_id, param_group, param_key, param_value, param_desc) VALUES
+(1, 'fee_rule', 'BASE_FREIGHT_PRICE', '35.00', '低空货运首重起步运费（元/首重3kg）'),
+(2, 'fee_rule', 'PER_KM_SURCHARGE', '4.50', '每千米航程附加费（元/km）'),
+(3, 'fee_rule', 'AIRSPACE_PASS_PRICE', '12.00', '每单法定低空空域通道使用费（元）');

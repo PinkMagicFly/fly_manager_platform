@@ -10,8 +10,32 @@
     {
       "path": "pages/profile/index",
       "style": {
-        "navigationBarTitleText": "商用机长工作台",
-        "navigationBarBackgroundColor": "#1677ff",
+        "navigationBarTitleText": "个人中心与设置",
+        "navigationBarBackgroundColor": "#0f172a",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/work/index",
+      "style": {
+        "navigationBarTitleText": "外场机长作业中枢",
+        "navigationBarBackgroundColor": "#0284c7",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/maintain/report",
+      "style": {
+        "navigationBarTitleText": "现场故障紧急上报",
+        "navigationBarBackgroundColor": "#ef4444",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/maintain/inspect",
+      "style": {
+        "navigationBarTitleText": "设备巡检打卡",
+        "navigationBarBackgroundColor": "#10b981",
         "navigationBarTextStyle": "white"
       }
     }
@@ -23,3 +47,4 @@
     "backgroundColor": "#F8F8F8"
   }
 }
+

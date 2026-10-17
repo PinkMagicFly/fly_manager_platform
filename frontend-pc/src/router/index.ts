@@ -48,6 +48,30 @@ const routes: RouteRecordRaw[] = [
         name: 'AuditLogs',
         component: () => import('@/views/admin/AuditLogsView.vue'),
         meta: { title: '敏感操作审计日志' }
+      },
+      {
+        path: 'asset/uav',
+        name: 'UavFleet',
+        component: () => import('@/views/asset/UavFleetView.vue'),
+        meta: { title: '机队资产台账' }
+      },
+      {
+        path: 'asset/site',
+        name: 'SiteMap',
+        component: () => import('@/views/asset/SiteMapView.vue'),
+        meta: { title: '场站一张图' }
+      },
+      {
+        path: 'asset/crew',
+        name: 'CrewShift',
+        component: () => import('@/views/asset/CrewShiftView.vue'),
+        meta: { title: '机组排班矩阵' }
+      },
+      {
+        path: 'asset/efficiency',
+        name: 'AssetEfficiency',
+        component: () => import('@/views/asset/AssetEfficiencyView.vue'),
+        meta: { title: '资产效能分析' }
       }
     ]
   },

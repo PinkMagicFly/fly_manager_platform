@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
-@ActiveProfiles("dev")
+@ActiveProfiles("test")
 @Transactional
 @DisplayName("集成测试: 商户资质入驻向导与审批流转")
 public class MerchantAuditFlowTest {

@@ -16,7 +16,7 @@ import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
-@ActiveProfiles("dev")
+@ActiveProfiles("test")
 @Transactional
 @DisplayName("集成测试: 客户实名与信用授信额度调增闭环")
 public class CustomerAuditFlowTest {

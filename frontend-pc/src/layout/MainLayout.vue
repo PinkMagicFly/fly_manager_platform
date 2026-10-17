@@ -41,6 +41,18 @@
           </template>
           <el-menu-item index="/merchant/sub-accounts">子账户与权限设置</el-menu-item>
         </el-sub-menu>
+
+        <!-- 机队资产中心 (阶段2核心底座) -->
+        <el-sub-menu index="asset">
+          <template #title>
+            <el-icon><Van /></el-icon>
+            <span>机队资产中心</span>
+          </template>
+          <el-menu-item index="/asset/uav">机队资产台账</el-menu-item>
+          <el-menu-item index="/asset/site">场站一张图</el-menu-item>
+          <el-menu-item index="/asset/crew">机组排班矩阵</el-menu-item>
+          <el-menu-item index="/asset/efficiency">资产效能分析</el-menu-item>
+        </el-sub-menu>
       </el-menu>
     </el-aside>
 

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fly.platform.asset.mapper.UavInfoMapper">
+
+    <select id="selectUavList" resultType="com.fly.platform.asset.entity.UavInfo">
+        SELECT * FROM uav_info
+        WHERE is_deleted = 0
+        <if test="merchantId != null">
+            AND merchant_id = #{merchantId}
+        </if>
+        <if test="model != null and model != ''">
+            AND model LIKE CONCAT('%', #{model}, '%')
+        </if>
+        <if test="state != null">
+            AND state = #{state}
+        </if>
+        ORDER BY uav_id DESC
+    </select>
+
+</mapper>

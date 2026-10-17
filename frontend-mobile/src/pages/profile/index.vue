@@ -9,6 +9,10 @@
     </view>
 
     <view class="list-card">
+      <view class="list-item" @click="navToWork" style="cursor: pointer;">
+        <text class="lbl" style="color: #0284c7; font-weight: bold;">👉 进入外场机长作业工作台</text>
+        <text class="val text-primary">点击进入 ›</text>
+      </view>
       <view class="list-item">
         <text class="lbl">绑定手机</text>
         <text class="val">{{ user?.mobile || '138****0000' }}</text>
@@ -59,6 +63,12 @@ onLoad(async () => {
     uni.setStorageSync('soarcloud_mobile_user', JSON.stringify(fresh))
   } catch (e) {}
 })
+
+const navToWork = () => {
+  uni.navigateTo({
+    url: '/pages/work/index'
+  })
+}
 
 const handleLogout = async () => {
   try {
