@@ -1,7 +1,10 @@
 package com.fly.platform.auth;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fly.platform.auth.dto.LoginRequestDTO;
 import com.fly.platform.auth.dto.LoginResponseDTO;
+import com.fly.platform.auth.entity.UamAccount;
+import com.fly.platform.auth.mapper.UamAccountMapper;
 import com.fly.platform.auth.service.AuthService;
 import com.fly.platform.common.exception.BusinessException;
 import org.junit.jupiter.api.DisplayName;
@@ -22,6 +25,9 @@ public class AuthServiceLoginTest {
 
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private UamAccountMapper accountMapper;
 
     @Test
     @DisplayName("管理员账号正确密码登录，断言返回有效Token与角色")
@@ -55,6 +61,10 @@ public class AuthServiceLoginTest {
     @Test
     @DisplayName("待审核状态账号尝试登录，断言直接拦截")
     public void testPendingAccountLogin() {
+        accountMapper.update(null, new LambdaUpdateWrapper<UamAccount>()
+                .eq(UamAccount::getLoginName, "merchant_pending")
+                .set(UamAccount::getStatus, 0));
+
         LoginRequestDTO req = new LoginRequestDTO();
         req.setUsername("merchant_pending");
         req.setPassword("123456");

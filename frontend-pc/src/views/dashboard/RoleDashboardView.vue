@@ -19,8 +19,12 @@
       <el-col :span="6">
         <el-card shadow="hover" class="stat-card">
           <div class="stat-title">待审批商户资质</div>
-          <div class="stat-num text-primary">2 <span class="stat-unit">家</span></div>
-          <div class="stat-footer">今日新增 +1</div>
+          <div class="stat-num text-primary">
+            {{ pendingMerchantCount }} <span class="stat-unit">家</span>
+          </div>
+          <div class="stat-footer">
+            {{ pendingMerchantCount > 0 ? '需运营管理人员核验' : '当前所有企业均已处理' }}
+          </div>
         </el-card>
       </el-col>
       <el-col :span="6">
@@ -67,18 +71,31 @@
         </el-card>
       </el-col>
       <el-col :span="10">
-        <el-card shadow="never" header="今日待办清单">
-          <el-timeline>
-            <el-timeline-item timestamp="刚刚" type="primary">
-              系统完成 RBAC 权限中心与加盐散列鉴权初始化
-            </el-timeline-item>
-            <el-timeline-item timestamp="10分钟前" type="warning">
-              翼联创新低空货运提交资质申报，等待审核
-            </el-timeline-item>
-            <el-timeline-item timestamp="30分钟前" type="success">
-              顺丰丰舟-90 (UAV-FY90-001) 起降场站机位预约成功
-            </el-timeline-item>
-          </el-timeline>
+        <el-card shadow="never" header="今日待办与动态清单">
+          <div v-loading="loadingTodos">
+            <el-timeline v-if="dynamicTodos.length > 0">
+              <el-timeline-item
+                v-for="(item, idx) in dynamicTodos"
+                :key="idx"
+                :timestamp="item.timestamp"
+                :type="item.type"
+              >
+                <div class="todo-item-content">
+                  <span class="todo-text">{{ item.title }}</span>
+                  <el-button
+                    v-if="item.actionPath"
+                    type="primary"
+                    link
+                    size="small"
+                    @click="$router.push(item.actionPath)"
+                  >
+                    处理
+                  </el-button>
+                </div>
+              </el-timeline-item>
+            </el-timeline>
+            <el-empty v-else description="暂无待办事项，系统运转良好" :image-size="60" />
+          </div>
         </el-card>
       </el-col>
     </el-row>
@@ -86,10 +103,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { UserFilled, Stamp, CreditCard, Document, User } from '@element-plus/icons-vue'
+import request from '@/utils/request'
 
+const router = useRouter()
 const userStore = useUserStore()
 
 const isAdmin = computed(() => userStore.userInfo?.roles.includes('ROLE_ADMIN'))
@@ -99,6 +119,106 @@ const userRoleName = computed(() => {
   if (isAdmin.value) return '超级管理员'
   if (isMerchant.value) return '物流商户主账号'
   return '平台操作员'
+})
+
+interface TodoItem {
+  title: string
+  timestamp: string
+  type: 'primary' | 'success' | 'warning' | 'danger' | 'info'
+  actionPath?: string
+}
+
+const pendingMerchantCount = ref(0)
+const loadingTodos = ref(false)
+const dynamicTodos = ref<TodoItem[]>([])
+
+const fetchDashboardData = async () => {
+  loadingTodos.value = true
+  const list: TodoItem[] = []
+
+  try {
+    if (isAdmin.value) {
+      // 1. 查询待审核商户
+      try {
+        const merchants: any = await request.get('/api/v1/merchant/list?auditState=0')
+        const pendingMerchants = merchants || []
+        pendingMerchantCount.value = pendingMerchants.length
+
+        pendingMerchants.forEach((m: any) => {
+          list.push({
+            title: `待审核商户：【${m.corpName}】提交了资质申报（信用代码：${m.licenseNo}）`,
+            timestamp: m.createdAt ? m.createdAt.substring(11, 19) : '待办',
+            type: 'warning',
+            actionPath: '/admin/merchant-audit'
+          })
+        })
+      } catch (e) {
+      }
+
+      // 2. 查询最新审计动态
+      try {
+        const logs: any = await request.get('/api/v1/admin/audit-logs?limit=4')
+        if (Array.isArray(logs)) {
+          logs.forEach((log: any) => {
+            list.push({
+              title: `[${log.moduleName || '系统'}] ${log.loginName || '用户'} 执行了「${log.actionName || '操作'}」`,
+              timestamp: log.createdAt ? log.createdAt.substring(11, 19) : '刚刚',
+              type: log.respStatus === 200 ? 'success' : 'danger',
+              actionPath: '/admin/audit-logs'
+            })
+          })
+        }
+      } catch (e) {
+      }
+    } else if (isMerchant.value) {
+      // 商户视角待办
+      try {
+        const archive: any = await request.get('/api/v1/merchant/my-archive')
+        if (archive) {
+          if (archive.auditState === 1) {
+            list.push({
+              title: `企业【${archive.corpName}】资质已审批通过，系统已激活`,
+              timestamp: '正常运行',
+              type: 'success'
+            })
+          } else if (archive.auditState === 0) {
+            list.push({
+              title: `企业入驻资质正在审核中，请耐心等待平台审批`,
+              timestamp: '待办',
+              type: 'warning'
+            })
+          }
+        }
+        const subs: any = await request.get('/api/v1/merchant/sub-accounts')
+        if (Array.isArray(subs)) {
+          list.push({
+            title: `企业已配置 ${subs.length} 个协同子账号席位`,
+            timestamp: '今日',
+            type: 'primary',
+            actionPath: '/merchant/sub-accounts'
+          })
+        }
+      } catch (e) {
+      }
+    }
+
+    // 补充底座基线动态
+    if (list.length === 0) {
+      list.push({
+        title: '系统权限与安全底座正常运行，所有待办已清空',
+        timestamp: '刚刚',
+        type: 'primary'
+      })
+    }
+  } catch (e) {
+  } finally {
+    dynamicTodos.value = list
+    loadingTodos.value = false
+  }
+}
+
+onMounted(() => {
+  fetchDashboardData()
 })
 </script>
 
@@ -149,7 +269,7 @@ const userRoleName = computed(() => {
   margin-top: 4px;
 }
 .stat-card {
-  border-radius: 8px;
+  padding: 4px;
 }
 .stat-title {
   font-size: 13px;
@@ -158,24 +278,35 @@ const userRoleName = computed(() => {
 .stat-num {
   font-size: 28px;
   font-weight: 700;
-  margin: 10px 0;
+  margin: 8px 0;
 }
 .stat-unit {
   font-size: 13px;
-  font-weight: normal;
+  font-weight: 400;
+  color: #64748b;
 }
-.text-primary { color: #165dff; }
-.text-success { color: #10b981; }
-.text-warning { color: #f59e0b; }
-.text-danger { color: #ef4444; }
 .stat-footer {
   font-size: 12px;
   color: #94a3b8;
 }
+.text-primary { color: #165dff; }
+.text-success { color: #00b42a; }
+.text-warning { color: #ff7d00; }
+.text-danger { color: #f53f3f; }
+
 .quick-grid {
   display: flex;
-  gap: 16px;
   flex-wrap: wrap;
-  padding: 10px 0;
+  gap: 12px;
+}
+.todo-item-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.todo-text {
+  font-size: 13px;
+  color: #334155;
 }
 </style>

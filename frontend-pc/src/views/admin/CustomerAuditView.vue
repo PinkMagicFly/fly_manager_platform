@@ -114,8 +114,10 @@ const openAdjustDialog = (row: any) => {
 const submitAdjust = async () => {
   saving.value = true
   try {
-    await request.put(`/api/v1/customer/${currentCustomer.value.customerId}/audit?authState=${editAuthState.value}`)
-    ElMessage.success('客户实名与授信信息已保存更新')
+    await request.put(
+      `/api/v1/customer/${currentCustomer.value.customerId}/audit?authState=${editAuthState.value}&creditLimit=${editLimit.value}`
+    )
+    ElMessage.success('客户实名状态与授信额度已保存更新')
     adjustVisible.value = false
     loadData()
   } catch (e) {

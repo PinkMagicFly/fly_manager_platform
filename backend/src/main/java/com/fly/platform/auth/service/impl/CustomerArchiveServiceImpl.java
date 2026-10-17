@@ -65,10 +65,15 @@ public class CustomerArchiveServiceImpl implements CustomerArchiveService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void auditCustomer(Long customerId, Integer authState) {
+    public void auditCustomer(Long customerId, Integer authState, java.math.BigDecimal creditLimit) {
         CustomerArchive archive = customerArchiveMapper.selectById(customerId);
         if (archive == null) throw new BusinessException("客户实名档案不存在");
-        archive.setAuthState(authState);
+        if (authState != null) {
+            archive.setAuthState(authState);
+        }
+        if (creditLimit != null) {
+            archive.setCreditLimit(creditLimit);
+        }
         archive.setUpdatedAt(LocalDateTime.now());
         customerArchiveMapper.updateById(archive);
     }

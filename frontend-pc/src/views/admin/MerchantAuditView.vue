@@ -28,7 +28,23 @@
         <el-table-column prop="corpName" label="企业全称" min-width="180" />
         <el-table-column prop="licenseNo" label="社会信用代码" width="180" />
         <el-table-column prop="contactName" label="法人联系人" width="110" />
-        <el-table-column prop="contactPhone" label="联系电话" width="130" />
+        <el-table-column prop="contactPhone" label="联系电话" width="160">
+          <template #default="{ row }">
+            <div class="phone-cell">
+              <span>{{ showFullPhone[row.merchantId] ? row.contactPhone : maskPhone(row.contactPhone) }}</span>
+              <el-button
+                type="primary"
+                link
+                size="small"
+                class="eye-btn"
+                @click="togglePhone(row.merchantId)"
+                :title="showFullPhone[row.merchantId] ? '隐藏手机号' : '查看明文手机号'"
+              >
+                <el-icon><component :is="showFullPhone[row.merchantId] ? View : Hide" /></el-icon>
+              </el-button>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="airworthinessCert" label="适航许可证号" min-width="160" />
         <el-table-column prop="auditState" label="审批状态" width="110">
           <template #default="{ row }">
@@ -74,12 +90,24 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { View, Hide } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
 const filterState = ref<number | undefined>(undefined)
 const keyword = ref('')
 const tableData = ref<any[]>([])
 const loading = ref(false)
+
+const showFullPhone = ref<Record<number, boolean>>({})
+
+const maskPhone = (phone: string) => {
+  if (!phone || phone.length < 7) return phone
+  return phone.substring(0, 3) + '****' + phone.substring(phone.length - 4)
+}
+
+const togglePhone = (id: number) => {
+  showFullPhone.value[id] = !showFullPhone.value[id]
+}
 
 const rejectDialogVisible = ref(false)
 const currentMerchant = ref<any>(null)
@@ -156,6 +184,18 @@ onMounted(() => {
 .search-box {
   display: flex;
   gap: 8px;
+}
+.phone-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.eye-btn {
+  margin-left: 4px;
+  color: #94a3b8;
+}
+.eye-btn:hover {
+  color: #165dff;
 }
 .done-text {
   font-size: 13px;

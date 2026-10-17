@@ -48,10 +48,13 @@ public class CustomerController {
 
     @PutMapping("/{customerId}/audit")
     @SaCheckRole("ROLE_ADMIN")
-    @Audit(module = "客户认证", action = "审批客户实名")
-    public Result<Void> auditCustomer(@PathVariable Long customerId, @RequestParam Integer authState) {
-        customerArchiveService.auditCustomer(customerId, authState);
-        return Result.ok("客户认证状态已更新", null);
+    @Audit(module = "客户认证", action = "审批客户实名与调整授信")
+    public Result<Void> auditCustomer(
+            @PathVariable Long customerId,
+            @RequestParam(required = false) Integer authState,
+            @RequestParam(required = false) java.math.BigDecimal creditLimit) {
+        customerArchiveService.auditCustomer(customerId, authState, creditLimit);
+        return Result.ok("客户认证状态与授信额度已更新", null);
     }
 }
 
