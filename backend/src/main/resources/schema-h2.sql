@@ -216,6 +216,65 @@ CREATE TABLE crew_shift (
 );
 
 
+-- 14. 货运订单主表 (cargo_order)
+DROP TABLE IF EXISTS cargo_order;
+CREATE TABLE cargo_order (
+  order_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  order_sn VARCHAR(24) NOT NULL UNIQUE,
+  customer_id BIGINT NOT NULL,
+  merchant_id BIGINT,
+  sender_addr VARCHAR(255) NOT NULL,
+  receiver_addr VARCHAR(255) NOT NULL,
+  sender_geo VARCHAR(64) NOT NULL,
+  receiver_geo VARCHAR(64) NOT NULL,
+  goods_type TINYINT NOT NULL,
+  goods_weight DECIMAL(8,2) NOT NULL,
+  urgent_flag TINYINT NOT NULL DEFAULT 0,
+  fee_base DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  fee_airspace DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  fee_urgent DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  fee_discount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  fee_total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  pay_way TINYINT NOT NULL DEFAULT 1,
+  pay_state TINYINT NOT NULL DEFAULT 0,
+  order_state TINYINT NOT NULL DEFAULT 10,
+  uav_id BIGINT,
+  apply_id BIGINT,
+  expect_arrive_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  is_deleted TINYINT NOT NULL DEFAULT 0
+);
+
+-- 15. 订单状态变迁流水表 (order_state_flow)
+DROP TABLE IF EXISTS order_state_flow;
+CREATE TABLE order_state_flow (
+  flow_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  order_id BIGINT NOT NULL,
+  from_state TINYINT NOT NULL,
+  to_state TINYINT NOT NULL,
+  operator_id BIGINT NOT NULL DEFAULT 0,
+  remark VARCHAR(255),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 16. 货运结算对账单表 (settle_bill)
+DROP TABLE IF EXISTS settle_bill;
+CREATE TABLE settle_bill (
+  bill_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  bill_sn VARCHAR(24) NOT NULL UNIQUE,
+  order_id BIGINT NOT NULL UNIQUE,
+  merchant_id BIGINT NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  bill_state TINYINT NOT NULL DEFAULT 0,
+  invoice_flag TINYINT NOT NULL DEFAULT 0,
+  settle_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  is_deleted TINYINT NOT NULL DEFAULT 0
+);
+
+
 -- 17. 空域管制区块网格表 (airspace_block)
 DROP TABLE IF EXISTS airspace_block;
 CREATE TABLE airspace_block (

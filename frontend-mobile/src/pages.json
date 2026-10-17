@@ -46,6 +46,31 @@
         "navigationBarBackgroundColor": "#0284c7",
         "navigationBarTextStyle": "white"
       }
+    ,
+    {
+      "path": "pages/order/create",
+      "style": {
+        "navigationBarTitleText": "低空寄件在线下单",
+        "navigationBarBackgroundColor": "#0284c7",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/order/list",
+      "style": {
+        "navigationBarTitleText": "低空货运订单池",
+        "navigationBarBackgroundColor": "#0284c7",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/order/detail",
+      "style": {
+        "navigationBarTitleText": "运单全景跟踪",
+        "navigationBarBackgroundColor": "#0284c7",
+        "navigationBarTextStyle": "white"
+      }
+    }
     }
   ],
   "globalStyle": {

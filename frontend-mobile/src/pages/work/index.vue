@@ -43,6 +43,11 @@
           <text class="act-name">在途突发故障上报</text>
           <text class="act-tip">紧急提报并置为故障</text>
         </view>
+        <view class="action-card bg-sky" @click="navTo('/pages/order/list')">
+          <text class="icon">📦</text>
+          <text class="act-name">执飞运单管理</text>
+          <text class="act-tip">起飞与送达签收确认</text>
+        </view>
       </view>
 
       <view class="content-card">
@@ -133,6 +138,19 @@
     <!-- 4. 【客户/商户通用视角】 -->
     <view v-else class="role-view-block">
       <view class="section-title">{{ isCustomer ? '企业低空寄件与信用授信' : '商户机队运营概览' }}</view>
+      <view class="action-grid" v-if="isCustomer">
+        <view class="action-card bg-sky" @click="navTo('/pages/order/create')">
+          <text class="icon">🚀</text>
+          <text class="act-name">在线寄件下单</text>
+          <text class="act-tip">即时试算与模拟支付</text>
+        </view>
+        <view class="action-card bg-emerald" @click="navTo('/pages/order/list')">
+          <text class="icon">📦</text>
+          <text class="act-name">我的物流运单</text>
+          <text class="act-tip">查看在途轨迹与签收</text>
+        </view>
+      </view>
+
       <view class="content-card">
         <view class="card-head"><text class="head-title">在册机队五态监控台</text></view>
         <view v-for="uav in uavList" :key="uav.uavId" class="uav-item">

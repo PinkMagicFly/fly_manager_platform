@@ -31,4 +31,9 @@ public enum UavStateEnum {
         }
         return null;
     }
+
+    public static String getDescByCode(Integer code) {
+        UavStateEnum state = fromCode(code);
+        return state != null ? state.getDescription() : "未知状态";
+    }
 }

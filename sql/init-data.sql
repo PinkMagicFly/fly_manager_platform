@@ -186,6 +186,36 @@ INSERT INTO violation_case (case_id, case_sn, apply_id, violate_kind, level, pun
 (3, 'VC202610170003', 1, 3, 2, 0, '南山科技园管制区巡航高度达165米（超出法定限高120米达45米）', NULL, NULL),
 (4, 'VC202610170004', 1, 4, 1, 1, '大运中心降落超时占用起降航道35分钟，造成后续机组盘旋等待', NULL, NULL);
 
+-- 15. 初始化货运订单主表 (cargo_order)
+TRUNCATE TABLE cargo_order;
+INSERT INTO cargo_order (order_id, order_sn, customer_id, merchant_id, sender_addr, receiver_addr, sender_geo, receiver_geo, goods_type, goods_weight, urgent_flag, fee_base, fee_airspace, fee_urgent, fee_discount, fee_total, pay_way, pay_state, order_state, uav_id, apply_id, expect_arrive_at) VALUES
+(1, 'ORD202610170001', 1, 1, '南山科技园低空枢纽（深圳湾）', '深圳大学总医院急诊楼起降坪', ST_GeomFromText('POINT(113.952 22.532)'), ST_GeomFromText('POINT(113.987 22.592)'), 2, 5.50, 1, 45.00, 25.00, 21.00, 3.00, 88.00, 1, 1, 20, NULL, NULL, DATE_ADD(NOW(), INTERVAL 2 HOUR)),
+(2, 'ORD202610170002', 1, 1, '南山科技园枢纽站A区', '福田CBD深业上城楼顶起降场', ST_GeomFromText('POINT(113.943 22.540)'), ST_GeomFromText('POINT(114.062 22.553)'), 3, 12.00, 0, 42.00, 28.50, 0.00, 5.00, 65.50, 1, 1, 30, NULL, NULL, DATE_ADD(NOW(), INTERVAL 3 HOUR)),
+(3, 'ORD202610170003', 1, 1, '南山科技园枢纽站B区', '福田CBD深业上城楼顶起降场', ST_GeomFromText('POINT(113.943 22.540)'), ST_GeomFromText('POINT(114.062 22.553)'), 4, 8.00, 1, 55.00, 30.00, 25.00, 0.00, 110.00, 1, 1, 50, 1, 1, DATE_ADD(NOW(), INTERVAL 30 MINUTE)),
+(4, 'ORD202610170004', 1, 1, '龙岗大运智慧物流场站', '盐田港综合保税区中转站', ST_GeomFromText('POINT(114.218 22.695)'), ST_GeomFromText('POINT(114.265 22.578)'), 1, 1.50, 0, 25.00, 15.00, 0.00, 5.00, 35.00, 1, 1, 60, 2, NULL, DATE_SUB(NOW(), INTERVAL 1 HOUR));
+
+-- 16. 初始化订单状态流水表 (order_state_flow)
+TRUNCATE TABLE order_state_flow;
+INSERT INTO order_state_flow (flow_id, order_id, from_state, to_state, operator_id, remark) VALUES
+(1, 1, 10, 20, 6, '客户完成在线微信支付'),
+(2, 2, 10, 20, 6, '客户在线支付成功'),
+(3, 2, 20, 30, 2, '商户调度中心确认承接该运单'),
+(4, 3, 10, 20, 6, '客户在线支付成功'),
+(5, 3, 20, 30, 2, '商户确认接单进入调度队列'),
+(6, 3, 30, 40, 2, '调度员指派无人机UAV-FY90-001并联动申报飞行计划'),
+(7, 3, 40, 50, 4, '机长完成航前巡检并确认起飞执行在途运输'),
+(8, 4, 10, 20, 6, '客户在线支付成功'),
+(9, 4, 20, 30, 2, '商户接单'),
+(10, 4, 30, 40, 2, '指派无人机完成调度'),
+(11, 4, 40, 50, 4, '起飞执行'),
+(12, 4, 50, 60, 4, '已安全精准降落目的地，客户签收完成');
+
+-- 17. 初始化货运结算对账单表 (settle_bill)
+TRUNCATE TABLE settle_bill;
+INSERT INTO settle_bill (bill_id, bill_sn, order_id, merchant_id, amount, bill_state, invoice_flag, settle_at) VALUES
+(1, 'BILL202610170001', 4, 1, 35.00, 1, 0, NOW());
+
+
 
 
 SET FOREIGN_KEY_CHECKS = 1;

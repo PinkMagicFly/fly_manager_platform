@@ -2,7 +2,7 @@ services:
   mysql:
     image: mysql:8.0.36
     container_name: soarcloud-mysql
-    restart: always
+    restart: "no"
     environment:
       MYSQL_ROOT_PASSWORD: "root"
       MYSQL_DATABASE: soarcloud_lae
@@ -22,7 +22,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: soarcloud-redis
-    restart: always
+    restart: "no"
     environment:
       TZ: Asia/Shanghai
     ports:

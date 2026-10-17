@@ -80,6 +80,17 @@
           <el-menu-item index="/airspace/apply-wizard">飞行计划申报向导</el-menu-item>
           <el-menu-item index="/airspace/approval">飞行申报进度台账</el-menu-item>
         </el-sub-menu>
+        <!-- 6. 订单运营中心 (商户/超级管理员可见) -->
+        <el-sub-menu index="order" v-if="isMerchant || isAdmin">
+          <template #title>
+            <el-icon><List /></el-icon>
+            <span>订单运营中心</span>
+          </template>
+          <el-menu-item index="/order/board">订单综合看板</el-menu-item>
+          <el-menu-item index="/order/dispatch">智能调度工作台</el-menu-item>
+          <el-menu-item index="/order/bills">结算与账单中心</el-menu-item>
+        </el-sub-menu>
+
       </el-menu>
     </el-aside>
 

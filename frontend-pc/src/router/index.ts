@@ -90,6 +90,30 @@ const routes: RouteRecordRaw[] = [
         name: 'FlightApproval',
         component: () => import('@/views/airspace/FlightApprovalView.vue'),
         meta: { title: '飞行申报审批台' }
+      },
+      {
+        path: 'order/board',
+        name: 'OrderBoard',
+        component: () => import('@/views/order/OrderBoardView.vue'),
+        meta: { title: '订单综合看板' }
+      },
+      {
+        path: 'order/detail/:id',
+        name: 'OrderDetail',
+        component: () => import('@/views/order/OrderDetailView.vue'),
+        meta: { title: '订单全景详情' }
+      },
+      {
+        path: 'order/dispatch',
+        name: 'OrderDispatch',
+        component: () => import('@/views/order/OrderDispatchView.vue'),
+        meta: { title: '智能调度工作台' }
+      },
+      {
+        path: 'order/bills',
+        name: 'OrderBills',
+        component: () => import('@/views/order/OrderBillsView.vue'),
+        meta: { title: '结算与账单中心' }
       }
     ]
   },
