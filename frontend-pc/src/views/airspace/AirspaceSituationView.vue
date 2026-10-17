@@ -27,7 +27,13 @@
     <!-- 右上角图层勾选与管理控制面板 -->
     <div class="layer-control-panel">
       <div class="panel-header">
-        <span><el-icon><Filter /></el-icon> 空域图层显隐控制</span>
+        <span><el-icon><Filter /></el-icon> 空域图层与底图控制</span>
+      </div>
+      <div class="map-type-selector">
+        <el-radio-group v-model="mapType" size="small" @change="switchBaseMap" style="margin-bottom: 10px; width: 100%;">
+          <el-radio-button value="vector">高德标准路网</el-radio-button>
+          <el-radio-button value="satellite">高德高清卫星</el-radio-button>
+        </el-radio-group>
       </div>
       <div class="layer-options">
         <el-checkbox v-model="filterForbidden" @change="renderAirspacePolygons">
@@ -155,8 +161,11 @@ const createForm = ref({
   geoPolygon: 'POLYGON((114.05 22.54, 114.08 22.54, 114.08 22.57, 114.05 22.57, 114.05 22.54))'
 })
 
+const mapType = ref<'vector' | 'satellite'>('vector')
 let mapInstance: L.Map | null = null
 let polygonLayerGroup: L.LayerGroup | null = null
+let vectorLayer: L.TileLayer | null = null
+let satelliteLayer: L.LayerGroup | null = null
 
 const forbiddenCount = computed(() => blocks.value.filter(b => b.blockKind === 1).length)
 const limitedCount = computed(() => blocks.value.filter(b => b.blockKind === 2).length)
@@ -180,12 +189,49 @@ const initMap = () => {
 
   L.control.zoom({ position: 'bottomright' }).addTo(mapInstance)
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  // 1. 高德中文矢量路网切片层
+  vectorLayer = L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+    subdomains: ['1', '2', '3', '4'],
     maxZoom: 18,
-    attribution: '&copy; CartoDB &copy; SoarCloud'
-  }).addTo(mapInstance)
+    minZoom: 3,
+    attribution: '© 高德地图 AutoNavi · 翔云低空空域态势中枢'
+  })
 
+  // 2. 高德高清卫星影像 + 路网标注层
+  const satTiles = L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', {
+    subdomains: ['1', '2', '3', '4'],
+    maxZoom: 18,
+    minZoom: 3
+  })
+  const satLabels = L.tileLayer('https://wprd0{s}.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scl=1&style=8', {
+    subdomains: ['1', '2', '3', '4'],
+    maxZoom: 18,
+    minZoom: 3,
+    attribution: '© 高德卫星影像 AutoNavi · 翔云低空空域态势中枢'
+  })
+  satelliteLayer = L.layerGroup([satTiles, satLabels])
+
+  vectorLayer.addTo(mapInstance)
   polygonLayerGroup = L.layerGroup().addTo(mapInstance)
+}
+
+const switchBaseMap = () => {
+  if (!mapInstance) return
+  if (mapType.value === 'vector') {
+    if (satelliteLayer && mapInstance.hasLayer(satelliteLayer)) {
+      mapInstance.removeLayer(satelliteLayer)
+    }
+    if (vectorLayer && !mapInstance.hasLayer(vectorLayer)) {
+      vectorLayer.addTo(mapInstance)
+    }
+  } else {
+    if (vectorLayer && mapInstance.hasLayer(vectorLayer)) {
+      mapInstance.removeLayer(vectorLayer)
+    }
+    if (satelliteLayer && !mapInstance.hasLayer(satelliteLayer)) {
+      satelliteLayer.addTo(mapInstance)
+    }
+  }
 }
 
 const renderAirspacePolygons = () => {

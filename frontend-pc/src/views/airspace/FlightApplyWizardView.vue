@@ -192,9 +192,12 @@ const initWizardMap = () => {
 
   L.control.zoom({ position: 'bottomright' }).addTo(mapInstance)
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  // 接入高德地图 AutoNavi 免 Key 极速切片服务（国内毫秒级秒开，全中文路网）
+  L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+    subdomains: ['1', '2', '3', '4'],
     maxZoom: 18,
-    attribution: '&copy; CartoDB &copy; SoarCloud'
+    minZoom: 3,
+    attribution: '© 高德地图 AutoNavi · 翔云低空航线申报向导'
   }).addTo(mapInstance)
 
   airspaceLayerGroup = L.layerGroup().addTo(mapInstance)
