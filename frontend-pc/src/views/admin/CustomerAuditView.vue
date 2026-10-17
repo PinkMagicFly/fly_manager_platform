@@ -21,11 +21,7 @@
       <el-table :data="tableData" v-loading="loading" border stripe style="width: 100%; margin-top: 16px">
         <el-table-column prop="customerId" label="档案ID" width="90" />
         <el-table-column prop="realName" label="真实姓名/企业主体" min-width="160" />
-        <el-table-column prop="idCard" label="身份证/信用代码" width="180">
-          <template #default="{ row }">
-            {{ formatIdCard(row.idCard) }}
-          </template>
-        </el-table-column>
+        <el-table-column prop="idCard" label="身份证/统一信用代码" min-width="200" />
         <el-table-column prop="creditLimit" label="月结授信额度 (元)" width="160">
           <template #default="{ row }">
             <span class="limit-num">¥ {{ Number(row.creditLimit).toFixed(2) }}</span>
@@ -55,6 +51,9 @@
         <el-form-item label="客户名称">
           <span>{{ currentCustomer?.realName }}</span>
         </el-form-item>
+        <el-form-item label="证件/信用代码">
+          <span style="font-family: monospace; font-weight: bold;">{{ currentCustomer?.idCard }}</span>
+        </el-form-item>
         <el-form-item label="月结授信额度">
           <el-input-number v-model="editLimit" :min="0" :step="1000" style="width:100%" />
         </el-form-item>
@@ -65,6 +64,7 @@
           </el-select>
         </el-form-item>
       </el-form>
+
       <template #footer>
         <el-button @click="adjustVisible = false">取消</el-button>
         <el-button type="primary" :loading="saving" @click="submitAdjust">确认保存</el-button>
@@ -87,11 +87,6 @@ const currentCustomer = ref<any>(null)
 const editLimit = ref(5000)
 const editAuthState = ref(1)
 const saving = ref(false)
-
-const formatIdCard = (id: string) => {
-  if (!id || id.length < 10) return id
-  return id.substring(0, 6) + '********' + id.substring(id.length - 4)
-}
 
 const loadData = async () => {
   loading.value = true

@@ -7,6 +7,7 @@ import com.fly.platform.auth.service.AuthService;
 import com.fly.platform.auth.vo.CurrentUserVO;
 import com.fly.platform.common.api.Result;
 import com.fly.platform.common.audit.Audit;
+import com.fly.platform.common.util.IpUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +28,7 @@ public class AuthController {
     @PostMapping("/login")
     @Audit(module = "账户认证", action = "用户登录")
     public Result<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO requestDTO, HttpServletRequest request) {
-        String clientIp = request.getRemoteAddr();
+        String clientIp = IpUtils.getClientIp(request);
         LoginResponseDTO responseDTO = authService.login(requestDTO, clientIp);
         return Result.ok("登录成功", responseDTO);
     }

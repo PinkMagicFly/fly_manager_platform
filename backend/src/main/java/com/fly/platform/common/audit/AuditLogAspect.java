@@ -3,6 +3,7 @@ package com.fly.platform.common.audit;
 import cn.dev33.satoken.stp.StpUtil;
 import com.fly.platform.admin.entity.AuditLog;
 import com.fly.platform.admin.mapper.AuditLogMapper;
+import com.fly.platform.common.util.IpUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +43,7 @@ public class AuditLogAspect {
         if (attributes != null) {
             HttpServletRequest request = attributes.getRequest();
             auditLog.setRequestUri(request.getRequestURI());
-            auditLog.setClientIp(request.getRemoteAddr());
+            auditLog.setClientIp(IpUtils.getClientIp(request));
             String clientKind = request.getHeader("Client-Kind");
             auditLog.setClientKind(clientKind != null ? clientKind : "pc");
         } else {

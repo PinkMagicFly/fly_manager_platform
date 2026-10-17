@@ -24,16 +24,24 @@
       </div>
 
       <el-table :data="logList" v-loading="loading" border stripe style="width: 100%; margin-top: 16px">
+        <el-table-column type="expand">
+          <template #default="{ row }">
+            <div style="padding: 12px 24px; background: #f8fafc; border-radius: 6px;">
+              <p style="margin-bottom: 8px;"><b>请求报文入参详情：</b><code style="word-break: break-all; color: #0f172a;">{{ row.reqParams || '无入参或已过滤' }}</code></p>
+              <p v-if="row.errorMsg" style="color: #ef4444; margin-top: 6px;"><b>异常报错堆栈：</b><code>{{ row.errorMsg }}</code></p>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="logId" label="日志ID" width="90" />
         <el-table-column prop="moduleName" label="所属模块" width="130">
           <template #default="{ row }">
             <el-tag size="small">{{ row.moduleName }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="actionName" label="操作动作" width="150" />
+        <el-table-column prop="actionName" label="操作动作" width="160" />
         <el-table-column prop="loginName" label="操作人" width="120" />
         <el-table-column prop="requestUri" label="请求路由" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="clientIp" label="客户端IP" width="130" />
+        <el-table-column prop="clientIp" label="客户端IP" min-width="150" />
         <el-table-column prop="clientKind" label="发起端" width="80" />
         <el-table-column prop="costTime" label="耗时" width="90">
           <template #default="{ row }">
