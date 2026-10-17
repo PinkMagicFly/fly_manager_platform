@@ -15,7 +15,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - D:/docker-data/mysql:/var/lib/mysql
+      - D:/Docker/data/mysql:/var/lib/mysql
       - D:/java/project/school-1/fly_manager_platform/sql/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
       - D:/java/project/school-1/fly_manager_platform/sql/init-data.sql:/docker-entrypoint-initdb.d/02_init_data.sql
 
@@ -28,5 +28,5 @@ services:
     ports:
       - "16379:6379"
     volumes:
-      - D:/docker-data/redis:/data
+      - D:/Docker/data/redis:/data
     command: redis-server --appendonly yes
