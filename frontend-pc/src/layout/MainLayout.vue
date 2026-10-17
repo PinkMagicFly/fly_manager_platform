@@ -59,6 +59,18 @@
           <el-menu-item index="/asset/crew">机组排班矩阵</el-menu-item>
           <el-menu-item index="/asset/efficiency">资产效能分析</el-menu-item>
         </el-sub-menu>
+
+        <!-- 空域合规监管 (阶段3核心服务) -->
+        <el-sub-menu index="airspace">
+          <template #title>
+            <el-icon><Compass /></el-icon>
+            <span>空域合规监管</span>
+          </template>
+          <el-menu-item index="/airspace/situation">空域三区态势图</el-menu-item>
+          <el-menu-item index="/airspace/apply-wizard">飞行计划申报向导</el-menu-item>
+          <el-menu-item index="/airspace/approval">飞行申报审批台</el-menu-item>
+          <el-menu-item index="/airspace/violation">飞行违规处置中心</el-menu-item>
+        </el-sub-menu>
       </el-menu>
     </el-aside>
 

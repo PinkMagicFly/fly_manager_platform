@@ -104,6 +104,32 @@
       </view>
     </view>
 
+    <!-- 4. 【空管视角 (ROLE_ATC)】 -->
+    <view v-else-if="isAtc" class="role-view-block">
+      <view class="section-title">空管合规在线监管工作台</view>
+      <view class="action-grid">
+        <view class="action-card bg-emerald" @click="navTo('/pages/airspace/approval')">
+          <text class="icon">✈️</text>
+          <text class="act-name">飞行计划在线审批</text>
+          <text class="act-tip">快速核准放行与时段锁定</text>
+        </view>
+      </view>
+      <view class="content-card">
+        <view class="card-head"><text class="head-title">在册机队与空域运行态势</text></view>
+        <view v-for="uav in uavList" :key="uav.uavId" class="uav-item">
+          <view class="uav-header">
+            <text class="sn">{{ uav.uavSn }}</text>
+            <text class="state-pill" :class="'state-' + uav.state">{{ uav.stateDesc }}</text>
+          </view>
+          <view class="model">{{ uav.model }}</view>
+          <view class="metrics">
+            <text class="metric">电量: {{ uav.batteryPct }}%</text>
+            <text class="metric">健康分: {{ uav.healthScore }}分</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <!-- 4. 【客户/商户通用视角】 -->
     <view v-else class="role-view-block">
       <view class="section-title">{{ isCustomer ? '企业低空寄件与信用授信' : '商户机队运营概览' }}</view>
@@ -136,11 +162,13 @@ const maintainList = ref<any[]>([])
 
 const isPilot = computed(() => user.value?.roles?.includes('ROLE_PILOT'))
 const isMaintainer = computed(() => user.value?.roles?.includes('ROLE_MAINTAINER'))
+const isAtc = computed(() => user.value?.roles?.includes('ROLE_ATC') || user.value?.accountKind === 4)
 const isCustomer = computed(() => user.value?.roles?.includes('ROLE_CUSTOMER') || user.value?.accountKind === 1)
 
 const currentRoleKey = computed(() => {
   if (isPilot.value) return 'pilot'
   if (isMaintainer.value) return 'maintainer'
+  if (isAtc.value) return 'atc'
   if (isCustomer.value) return 'customer'
   return 'merchant'
 })
@@ -148,6 +176,7 @@ const currentRoleKey = computed(() => {
 const currentRoleTitle = computed(() => {
   if (isPilot.value) return '商用飞手机长'
   if (isMaintainer.value) return '外场维保专员'
+  if (isAtc.value) return '空管监察员'
   if (isCustomer.value) return '企业货运客户'
   return '低空物流商户'
 })
@@ -155,11 +184,19 @@ const currentRoleTitle = computed(() => {
 const currentRoleSubtitle = computed(() => {
   if (isPilot.value) return '执照 CAAC-20210988 (有效期至 2028-12-31)'
   if (isMaintainer.value) return '常驻基地：南山科技园低空综合起降枢纽'
+  if (isAtc.value) return '所属机构：民航深圳空管综合监察支队'
   if (isCustomer.value) return '签约单位：腾讯科技（深圳）低空物资部'
   return '企业名称：深圳市丰翼低空物流科技有限公司'
 })
 
 const roleStats = computed(() => {
+  if (isAtc.value) {
+    return [
+      { label: '空域管制区', value: '3处' },
+      { label: '今日申报', value: '2单' },
+      { label: '违规案件', value: '1起' }
+    ]
+  }
   if (isPilot.value) {
     return [
       { label: '安全执飞', value: '480h' },

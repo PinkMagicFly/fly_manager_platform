@@ -210,3 +210,73 @@ CREATE TABLE crew_shift (
   is_deleted TINYINT NOT NULL DEFAULT 0
 );
 
+
+-- 17. 空域管制区块网格表 (airspace_block)
+DROP TABLE IF EXISTS airspace_block;
+CREATE TABLE airspace_block (
+  block_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  block_name VARCHAR(64) NOT NULL,
+  block_kind TINYINT NOT NULL,
+  geo_polygon TEXT NOT NULL,
+  limit_alt INT,
+  effective_at TIMESTAMP,
+  expire_at TIMESTAMP,
+  source VARCHAR(32) NOT NULL DEFAULT '空管同步',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  is_deleted TINYINT NOT NULL DEFAULT 0
+);
+
+-- 18. 飞行计划申报主表 (flight_apply)
+DROP TABLE IF EXISTS flight_apply;
+CREATE TABLE flight_apply (
+  apply_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  apply_sn VARCHAR(24) NOT NULL UNIQUE,
+  order_id BIGINT,
+  merchant_id BIGINT NOT NULL,
+  uav_id BIGINT NOT NULL,
+  pilot_id BIGINT NOT NULL,
+  route_line TEXT NOT NULL,
+  alt_planned INT NOT NULL,
+  start_at TIMESTAMP NOT NULL,
+  end_at TIMESTAMP NOT NULL,
+  check_state TINYINT NOT NULL DEFAULT 0,
+  approve_state TINYINT NOT NULL DEFAULT 0,
+  approver_id BIGINT,
+  approve_note VARCHAR(255),
+  approve_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  is_deleted TINYINT NOT NULL DEFAULT 0
+);
+
+-- 19. 电子围栏合规校验规则表 (fence_rule)
+DROP TABLE IF EXISTS fence_rule;
+CREATE TABLE fence_rule (
+  rule_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  rule_name VARCHAR(64) NOT NULL,
+  buffer_distance INT NOT NULL DEFAULT 50,
+  max_altitude INT NOT NULL DEFAULT 120,
+  action_policy TINYINT NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  is_deleted TINYINT NOT NULL DEFAULT 0
+);
+
+-- 20. 飞行违规案件记录表 (violation_case)
+DROP TABLE IF EXISTS violation_case;
+CREATE TABLE violation_case (
+  case_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  case_sn VARCHAR(24) NOT NULL UNIQUE,
+  apply_id BIGINT NOT NULL,
+  violate_kind TINYINT NOT NULL,
+  level TINYINT NOT NULL DEFAULT 1,
+  punish_state TINYINT NOT NULL DEFAULT 0,
+  evidence VARCHAR(255),
+  handled_by BIGINT,
+  handled_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  is_deleted TINYINT NOT NULL DEFAULT 0
+);
+

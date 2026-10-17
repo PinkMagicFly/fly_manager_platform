@@ -38,6 +38,14 @@
         "navigationBarBackgroundColor": "#10b981",
         "navigationBarTextStyle": "white"
       }
+    },
+    {
+      "path": "pages/airspace/approval",
+      "style": {
+        "navigationBarTitleText": "空管移动端飞行审批",
+        "navigationBarBackgroundColor": "#0284c7",
+        "navigationBarTextStyle": "white"
+      }
     }
   ],
   "globalStyle": {

@@ -72,6 +72,30 @@ const routes: RouteRecordRaw[] = [
         name: 'AssetEfficiency',
         component: () => import('@/views/asset/AssetEfficiencyView.vue'),
         meta: { title: '资产效能分析' }
+      },
+      {
+        path: 'airspace/situation',
+        name: 'AirspaceSituation',
+        component: () => import('@/views/airspace/AirspaceSituationView.vue'),
+        meta: { title: '空域三区态势图' }
+      },
+      {
+        path: 'airspace/apply-wizard',
+        name: 'FlightApplyWizard',
+        component: () => import('@/views/airspace/FlightApplyWizardView.vue'),
+        meta: { title: '飞行计划申报向导' }
+      },
+      {
+        path: 'airspace/approval',
+        name: 'FlightApproval',
+        component: () => import('@/views/airspace/FlightApprovalView.vue'),
+        meta: { title: '飞行申报审批台' }
+      },
+      {
+        path: 'airspace/violation',
+        name: 'ViolationCase',
+        component: () => import('@/views/airspace/ViolationCaseView.vue'),
+        meta: { title: '飞行违规处置中心' }
       }
     ]
   },

@@ -58,3 +58,25 @@ INSERT INTO customer_archive (customer_id, account_id, real_name, id_card, credi
 INSERT INTO sys_param (param_id, param_group, param_key, param_value, param_desc) VALUES
 (1, 'fee_rule', 'BASE_FREIGHT_PRICE', '35.00', '低空货运首重起步运费（元）'),
 (2, 'alarm_threshold', 'ROUTE_DEVIATION_METERS', '50', '允许最大偏航米数');
+
+-- 空域管控区块网格 (airspace_block)
+INSERT INTO airspace_block (block_id, block_name, block_kind, geo_polygon, limit_alt, effective_at, expire_at, source) VALUES
+(1, '深圳宝安国际机场核心净空禁飞区', 1, 'POLYGON((113.78 22.60, 113.84 22.60, 113.84 22.66, 113.78 22.66, 113.78 22.60))', 0, NULL, NULL, '民航中南局'),
+(2, '南山科技园总部基地限高管制区', 2, 'POLYGON((113.93 22.52, 113.96 22.52, 113.96 22.56, 113.93 22.56, 113.93 22.52))', 120, NULL, NULL, '市低空空管委'),
+(3, '大运体育中心赛事临时管制空域', 3, 'POLYGON((114.20 22.68, 114.23 22.68, 114.23 22.71, 114.20 22.71, 114.20 22.68))', 80, DATEADD('DAY', -1, CURRENT_TIMESTAMP), DATEADD('DAY', 7, CURRENT_TIMESTAMP), '公安低空警卫办');
+
+-- 电子围栏规则 (fence_rule)
+INSERT INTO fence_rule (rule_id, rule_name, buffer_distance, max_altitude, action_policy) VALUES
+(1, '重点敏感目标法定禁飞规则', 50, 0, 3),
+(2, '城市建成区法定真高上限规则', 30, 120, 2),
+(3, '沿海航道动态预警缓冲规则', 100, 150, 1);
+
+-- 样例申报单 (flight_apply)
+INSERT INTO flight_apply (apply_id, apply_sn, order_id, merchant_id, uav_id, pilot_id, route_line, alt_planned, start_at, end_at, check_state, approve_state, approver_id, approve_note, approve_at) VALUES
+(1, 'FA202610170001', 101, 1, 1, 1, 'LINESTRING(113.943 22.540, 114.000 22.545, 114.062 22.553)', 100, '2026-10-18 09:00:00', '2026-10-18 10:30:00', 1, 1, 3, '合规校验通过，航线无空域冲突，批准执行', '2026-10-17 12:00:00'),
+(2, 'FA202610170002', 102, 1, 3, 1, 'LINESTRING(114.218 22.695, 114.240 22.690, 114.265 22.578)', 90, '2026-10-19 14:00:00', '2026-10-19 15:30:00', 1, 0, NULL, NULL, NULL);
+
+-- 样例违规案件 (violation_case)
+INSERT INTO violation_case (case_id, case_sn, apply_id, violate_kind, level, punish_state, evidence, handled_by, handled_at) VALUES
+(1, 'VC202610170001', 1, 1, 1, 2, '偏离规划航道超120米，持续时间35秒', 3, '2026-10-17 15:30:00');
+

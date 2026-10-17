@@ -1,0 +1,66 @@
+package com.fly.platform.airspace.controller;
+
+import cn.dev33.satoken.annotation.SaCheckLogin;
+import com.fly.platform.airspace.dto.AirspaceBlockDTO;
+import com.fly.platform.airspace.dto.AirspaceValidateDTO;
+import com.fly.platform.airspace.entity.AirspaceBlock;
+import com.fly.platform.airspace.service.AirspaceBlockService;
+import com.fly.platform.airspace.vo.AirspaceBlockVO;
+import com.fly.platform.airspace.vo.AirspaceValidateResultVO;
+import com.fly.platform.common.api.Result;
+import com.fly.platform.common.audit.Audit;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * 低空空域管制网格与电子围栏态势控制器
+ *
+ * @author SoarCloud Team
+ */
+@RestController
+@RequestMapping("/api/v1/airspace")
+@RequiredArgsConstructor
+public class AirspaceBlockController {
+
+    private final AirspaceBlockService airspaceBlockService;
+
+    /**
+     * 查询全量空域管制区块（含三区分区着色坐标序列）
+     */
+    @GetMapping("/blocks")
+    public Result<List<AirspaceBlockVO>> getAllBlocks() {
+        return Result.ok(airspaceBlockService.getAllBlocks());
+    }
+
+    /**
+     * 航线合规碰撞毫秒级即时校验与避障纠偏
+     */
+    @PostMapping("/validate")
+    public Result<AirspaceValidateResultVO> validateRoute(@Valid @RequestBody AirspaceValidateDTO dto) {
+        return Result.ok(airspaceBlockService.validateRoute(dto));
+    }
+
+    /**
+     * 新增或编辑空域管制区块
+     */
+    @SaCheckLogin
+    @Audit(module = "空域网格", action = "保存空域区块")
+    @PostMapping("/blocks/save")
+    public Result<AirspaceBlock> saveBlock(@Valid @RequestBody AirspaceBlockDTO dto) {
+        return Result.ok("空域网格区块保存成功", airspaceBlockService.saveBlock(dto));
+    }
+
+    /**
+     * 逻辑删除空域区块
+     */
+    @SaCheckLogin
+    @Audit(module = "空域网格", action = "删除空域区块")
+    @DeleteMapping("/blocks/delete/{id}")
+    public Result<Void> deleteBlock(@PathVariable("id") Long id) {
+        airspaceBlockService.deleteBlock(id);
+        return Result.ok("空域区块已删除", null);
+    }
+}
