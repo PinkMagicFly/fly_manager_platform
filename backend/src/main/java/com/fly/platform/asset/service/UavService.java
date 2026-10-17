@@ -38,5 +38,8 @@ public interface UavService {
     List<UavMaintain> listMaintains(Long uavId);
 
     /** 维保验收合格（联动恢复无人机为闲置） */
+    /** 移动作业端巡检打卡（落库定期巡检合格工单并更新下次保养时间） */
+    UavMaintain submitInspect(com.fly.platform.asset.dto.UavInspectDTO dto);
+
     void acceptMaintain(Long maintainId, MaintainAcceptDTO dto);
 }

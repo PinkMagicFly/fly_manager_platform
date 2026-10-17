@@ -67,6 +67,14 @@ public class UavController {
         return Result.ok("故障工单已受理，设备已自动切换为故障待修状态", maintain);
     }
 
+    @PostMapping("/inspect")
+    @Audit(module = "维保管理", action = "外场设备安全巡检打卡")
+    public Result<UavMaintain> submitInspect(@Valid @RequestBody com.fly.platform.asset.dto.UavInspectDTO dto) {
+        UavMaintain maintain = uavService.submitInspect(dto);
+        return Result.ok("巡检打卡成功，设备各项自检参数正常已放行", maintain);
+    }
+
+
     @GetMapping("/maintain/list")
     public Result<List<UavMaintain>> listMaintains(@RequestParam(required = false) Long uavId) {
         return Result.ok(uavService.listMaintains(uavId));

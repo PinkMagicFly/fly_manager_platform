@@ -94,5 +94,25 @@ public class UavStateMachineTest {
         assertThat(updated.getUpdatedAt()).isNotNull();
         assertThat(updated.getUpdatedAt()).isAfterOrEqualTo(beforeTime);
     }
+
+    @Test
+    @DisplayName("测试外场设备巡检打卡: 成功生成定期巡检合格工单并更新下次保养时间")
+    public void testSubmitInspect() {
+        com.fly.platform.asset.dto.UavInspectDTO inspectDTO = new com.fly.platform.asset.dto.UavInspectDTO();
+        inspectDTO.setUavId(1L);
+        inspectDTO.setSiteId(1L);
+        inspectDTO.setItemsSummary("机臂结构正常，无刷电机自检通过，GPS锁星20颗");
+        inspectDTO.setInspectNote("自检放行合格");
+
+        com.fly.platform.asset.entity.UavMaintain maintain = uavService.submitInspect(inspectDTO);
+        assertThat(maintain.getMaintainId()).isNotNull();
+        assertThat(maintain.getMaintainType()).isEqualTo(1); // 1-定期巡检
+        assertThat(maintain.getMaintainState()).isEqualTo(2); // 2-已验收合格
+
+        UavInfo uav = uavInfoMapper.selectById(1L);
+        assertThat(uav.getHealthScore()).isGreaterThanOrEqualTo(95);
+        assertThat(uav.getNextMaintainAt()).isNotNull();
+    }
+
 }
 

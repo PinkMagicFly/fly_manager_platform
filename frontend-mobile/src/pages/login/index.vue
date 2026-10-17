@@ -67,10 +67,10 @@ const handleLogin = async () => {
       icon: 'success'
     })
     setTimeout(() => {
-      uni.navigateTo({
-        url: '/pages/profile/index'
+      uni.reLaunch({
+        url: '/pages/work/index'
       })
-    }, 600)
+    }, 400)
   } catch (e) {
   } finally {
     loading.value = false

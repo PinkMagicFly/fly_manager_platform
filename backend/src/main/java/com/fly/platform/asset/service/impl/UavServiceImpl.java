@@ -194,6 +194,38 @@ public class UavServiceImpl implements UavService {
         }
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public UavMaintain submitInspect(com.fly.platform.asset.dto.UavInspectDTO dto) {
+        UavInfo uav = uavInfoMapper.selectById(dto.getUavId());
+        if (uav == null) {
+            throw new BusinessException(404, "无人机资产不存在");
+        }
+
+        // 1. 插入一条类型为 1-定期巡检保养，状态为 2-已验收合格 的工单记录
+        UavMaintain maintain = new UavMaintain();
+        maintain.setUavId(uav.getUavId());
+        maintain.setMaintainType(1); // 1-定期巡检保养
+        maintain.setFaultDesc(dto.getItemsSummary() != null ? dto.getItemsSummary() : "航前/航后例行安全巡检打卡全部合格");
+        maintain.setRepairContent(dto.getInspectNote() != null ? dto.getInspectNote() : "机身外观良好、紧固螺丝锁死、动力电池接触完好、图传GPS定位正常，自检放行");
+        maintain.setMaintainState(MaintainStateEnum.PASSED.getCode()); // 2-已验收合格
+        maintain.initAudit();
+        uavMaintainMapper.insert(maintain);
+
+        // 2. 联动更新无人机健康评分和下次计划维保日期 (往后顺延7天)
+        if (uav.getHealthScore() == null || uav.getHealthScore() < 95) {
+            uav.setHealthScore(98);
+        }
+        uav.setNextMaintainAt(java.time.LocalDateTime.now().plusDays(7));
+        uav.updateAudit();
+        uavInfoMapper.updateById(uav);
+
+        log.info("移动作业端完成无人机巡检打卡: uavId={}, SN={}, 工单ID={}",
+                uav.getUavId(), uav.getUavSn(), maintain.getMaintainId());
+        return maintain;
+    }
+
+
     private UavDetailVO convertToVO(UavInfo uav) {
         UavDetailVO vo = new UavDetailVO();
         BeanUtils.copyProperties(uav, vo);
