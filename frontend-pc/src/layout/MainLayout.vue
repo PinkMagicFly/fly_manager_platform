@@ -1,10 +1,15 @@
 <template>
   <el-container class="layout-container">
-    <!-- 侧边导航栏 -->
-    <el-aside width="240px" class="aside-menu">
+    <!-- 移动端顶部跳转原生App提示条 -->
+    <div v-if="isMobile" class="mobile-top-banner" @click="goToMobile">
+      <span>📱 检测到手机浏览器访问，点击进入专属【移动作业端】 ›</span>
+    </div>
+
+    <!-- 侧边导航栏 (移动端自动折叠为图标，保留主区域宽度) -->
+    <el-aside :width="isMobile ? '64px' : '240px'" class="aside-menu">
       <div class="logo-box">
         <el-icon class="logo-icon"><Position /></el-icon>
-        <div class="logo-title">
+        <div v-if="!isMobile" class="logo-title">
           <span class="main-text">翔云·低空运营</span>
           <span class="sub-text">智慧物流中枢</span>
         </div>
@@ -16,10 +21,11 @@
         background-color="#0f172a"
         text-color="#94a3b8"
         active-text-color="#ffffff"
+        :collapse="isMobile"
       >
         <el-menu-item index="/dashboard">
           <el-icon><Odometer /></el-icon>
-          <span>角色工作台</span>
+          <template #title><span>角色工作台</span></template>
         </el-menu-item>
 
         <!-- 管理员专属菜单 -->
@@ -57,7 +63,7 @@
     </el-aside>
 
     <!-- 右侧主体内容 -->
-    <el-container>
+    <el-container class="right-container">
       <!-- 顶部 Header -->
       <el-header height="60px" class="header-bar">
         <div class="header-left">
@@ -68,9 +74,9 @@
             {{ roleText }}
           </el-tag>
           <span class="user-name">{{ userStore.userInfo?.loginName }}</span>
-          <span class="user-mobile">({{ userStore.userInfo?.mobile }})</span>
+          <span v-if="!isMobile" class="user-mobile">({{ userStore.userInfo?.mobile }})</span>
           <el-button type="danger" link @click="handleLogout" class="logout-btn">
-            <el-icon><SwitchButton /></el-icon> 退出
+            <el-icon><SwitchButton /></el-icon> <span v-if="!isMobile">退出</span>
           </el-button>
         </div>
       </el-header>
@@ -84,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessageBox, ElMessage } from 'element-plus'
@@ -93,6 +99,24 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
+const isMobile = ref(false)
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 768
+}
+
+const goToMobile = () => {
+  window.location.href = '/mobile/'
+}
+
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
+
 const activePath = computed(() => route.path)
 const currentRouteTitle = computed(() => (route.meta.title as string) || '工作台')
 
@@ -100,10 +124,10 @@ const isAdmin = computed(() => userStore.userInfo?.roles.includes('ROLE_ADMIN'))
 const isMerchant = computed(() => userStore.userInfo?.roles.includes('ROLE_MERCHANT') || userStore.userInfo?.accountKind === 2)
 
 const roleText = computed(() => {
-  if (userStore.userInfo?.roles.includes('ROLE_ADMIN')) return '平台超级管理员'
-  if (userStore.userInfo?.roles.includes('ROLE_MERCHANT')) return '低空物流商户'
-  if (userStore.userInfo?.roles.includes('ROLE_ATC')) return '空管监察员'
-  if (userStore.userInfo?.roles.includes('ROLE_PILOT')) return '商用飞手机长'
+  if (userStore.userInfo?.roles.includes('ROLE_ADMIN')) return isMobile.value ? '超管' : '平台超级管理员'
+  if (userStore.userInfo?.roles.includes('ROLE_MERCHANT')) return isMobile.value ? '商户' : '低空物流商户'
+  if (userStore.userInfo?.roles.includes('ROLE_ATC')) return isMobile.value ? '空管' : '空管监察员'
+  if (userStore.userInfo?.roles.includes('ROLE_PILOT')) return isMobile.value ? '机长' : '商用飞手机长'
   return '系统用户'
 })
 
@@ -131,12 +155,35 @@ const handleLogout = () => {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+  display: flex;
+}
+.mobile-top-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: linear-gradient(90deg, #0284c7, #0ea5e9);
+  color: #ffffff;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  cursor: pointer;
+}
+.right-container {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 .aside-menu {
   background-color: #0f172a;
   border-right: 1px solid #1e293b;
   display: flex;
   flex-direction: column;
+  transition: width 0.25s ease;
 }
 .logo-box {
   height: 60px;
@@ -175,35 +222,45 @@ const handleLogout = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 16px;
 }
 .current-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: #1e293b;
 }
 .header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 .role-tag {
   font-size: 12px;
 }
 .user-name {
   font-weight: 600;
+  font-size: 13px;
   color: #0f172a;
 }
 .user-mobile {
-  font-size: 13px;
+  font-size: 12px;
   color: #64748b;
 }
 .logout-btn {
-  margin-left: 8px;
+  margin-left: 4px;
 }
 .main-content {
   background-color: #f1f5f9;
-  padding: 20px;
+  padding: 14px;
   overflow-y: auto;
+  overflow-x: auto;
+}
+@media (max-width: 768px) {
+  .header-bar {
+    padding: 0 8px;
+  }
+  .main-content {
+    padding: 8px;
+  }
 }
 </style>

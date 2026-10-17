@@ -136,6 +136,7 @@ import L from 'leaflet'
 import { getSiteMap, getSiteBookings, checkBookingConflict, createSiteBooking } from '@/api/asset'
 
 let mapInstance: L.Map | null = null
+let markerGroup: L.LayerGroup | null = null
 const sites = ref<any[]>([])
 const activeSite = ref<any>(null)
 const drawerVisible = ref(false)
@@ -160,58 +161,72 @@ const gaugeColor = computed(() => {
 
 const initLeafletMap = () => {
   if (mapInstance) return
-  // 深圳地理中心
+  // 深圳地理中心，默认关闭左上角默认缩放控制器，避免与统计浮窗重叠
   mapInstance = L.map('leaflet-site-map', {
     center: [22.58, 114.10],
     zoom: 11,
-    zoomControl: true
+    zoomControl: false
   })
 
-  // 采用 CartoDB 高对比度暗色或高德瓦片
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  // 缩放控制器显式添加至右下角
+  L.control.zoom({ position: 'bottomright' }).addTo(mapInstance)
+
+  // 方案 B：高德中文免 Key 极速瓦片服务（国内秒开，全中文路网与地名）
+  L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+    subdomains: ['1', '2', '3', '4'],
     maxZoom: 18,
-    attribution: '© OpenStreetMap contributors, © CARTO'
+    minZoom: 3,
+    attribution: '© 高德地图 AutoNavi · 翔云低空智慧运营底座'
   }).addTo(mapInstance)
+
+  markerGroup = L.layerGroup().addTo(mapInstance)
 }
 
 const renderSiteMarkers = () => {
-  if (!mapInstance) return
+  if (!mapInstance || !markerGroup) return
+  markerGroup.clearLayers()
+
+  const markers: L.Marker[] = []
 
   sites.value.forEach((site) => {
     const lat = site.latitude || 22.54
     const lng = site.longitude || 113.94
 
-    // 自定义 Leaflet 图标
+    // 自定义 Leaflet 图标：绿底代表有充足空位，红底代表机位紧张/已满
     const isFull = site.occupied >= site.capacity
     const markerColor = isFull ? '#ef4444' : '#10b981'
 
     const customHtml = `
-      <div style="background-color: ${markerColor}; width: 28px; height: 28px; border-radius: 50%;
-                  display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;
-                  font-size: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.3); border: 2px solid #ffffff;">
+      <div style="background-color: ${markerColor}; width: 32px; height: 32px; border-radius: 50%;
+                  display: flex; flex-direction: column; align-items: center; justify-content: center;
+                  color: white; font-weight: bold; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+                  border: 2px solid #ffffff; cursor: pointer;">
         ${site.capacity - site.occupied}
       </div>
     `
     const icon = L.divIcon({
       html: customHtml,
       className: 'site-leaflet-marker',
-      iconSize: [28, 28],
-      iconAnchor: [14, 14]
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
     })
 
-    const marker = L.marker([lat, lng], { icon }).addTo(mapInstance!)
+    const marker = L.marker([lat, lng], { icon })
+    markerGroup!.addLayer(marker)
+    markers.push(marker)
 
     const popupHtml = `
-      <div style="min-width: 180px; padding: 4px;">
-        <h4 style="margin: 0 0 6px 0; color: #0f172a; font-size: 14px;">${site.siteName}</h4>
-        <div style="font-size: 12px; color: #64748b; line-height: 1.6;">
+      <div style="min-width: 200px; padding: 4px;">
+        <h4 style="margin: 0 0 6px 0; color: #0f172a; font-size: 14px; font-weight: bold;">${site.siteName}</h4>
+        <div style="font-size: 12px; color: #64748b; line-height: 1.7;">
+          <div>场站编号：<code style="color:#0284c7">${site.siteCode}</code></div>
           <div>机位总容积：<b>${site.capacity}</b> 机位</div>
           <div>当前空闲：<b style="color: ${markerColor}">${site.available}</b> 机位</div>
-          <div>运营状态：${site.siteStateDesc}</div>
+          <div>运营状态：<span style="color:#10b981">${site.siteStateDesc}</span></div>
         </div>
-        <button id="btn-site-${site.siteId}" style="margin-top: 8px; width: 100%; padding: 4px 8px;
-                background-color: #0284c7; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-          查看机位详情与预约
+        <button id="btn-site-${site.siteId}" style="margin-top: 8px; width: 100%; padding: 6px 10px;
+                background-color: #0284c7; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">
+          查看机位详情与时空预约 ›
         </button>
       </div>
     `
@@ -226,6 +241,12 @@ const renderSiteMarkers = () => {
       }, 50)
     })
   })
+
+  // 如果有标记点，自动将地图视野平滑居中聚焦到 4 处场站区域
+  if (markers.length > 0) {
+    const group = L.featureGroup(markers)
+    mapInstance.fitBounds(group.getBounds().pad(0.2))
+  }
 }
 
 const fetchSiteMapData = async () => {
@@ -425,6 +446,29 @@ onUnmounted(() => {
   font-size: 12px;
   color: #475569;
 }
+
+@media (max-width: 768px) {
+  .site-map-container {
+    height: calc(100vh - 120px);
+  }
+  .map-overlay-panel {
+    top: 8px;
+    left: 8px;
+    padding: 8px 12px;
+    max-width: calc(100vw - 40px);
+  }
+  .overlay-title {
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  .stat-badge .num {
+    font-size: 15px;
+  }
+  .stat-badge .lbl {
+    font-size: 10px;
+  }
+}
+
 </style>
 
 
