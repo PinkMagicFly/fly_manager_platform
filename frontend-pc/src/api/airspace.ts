@@ -105,33 +105,3 @@ export function updateFenceRule(data: any): Promise<any> {
   })
 }
 
-// 4. 飞行违规案件
-export function getViolationCaseList(params?: {
-  violateKind?: number
-  punishState?: number
-}): Promise<any> {
-  return request({
-    url: '/api/v1/violation/list',
-    method: 'get',
-    params
-  })
-}
-
-export function getViolationCaseDetail(id: number): Promise<any> {
-  return request({
-    url: `/api/v1/violation/detail/${id}`,
-    method: 'get'
-  })
-}
-
-export function handleViolationCase(data: {
-  caseId: number
-  level: number
-  punishDesc: string
-}): Promise<any> {
-  return request({
-    url: '/api/v1/violation/handle',
-    method: 'post',
-    data
-  })
-}

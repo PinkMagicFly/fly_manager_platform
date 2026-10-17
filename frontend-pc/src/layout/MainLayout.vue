@@ -68,7 +68,6 @@
           </template>
           <el-menu-item index="/airspace/situation">空域三区态势图</el-menu-item>
           <el-menu-item index="/airspace/approval">飞行计划审批台</el-menu-item>
-          <el-menu-item index="/airspace/violation">飞行违规处置中心</el-menu-item>
         </el-sub-menu>
 
         <!-- 5. 商户专属：飞行申报与航线规划中枢 -->
@@ -80,7 +79,6 @@
           <el-menu-item index="/airspace/situation">空域管制态势图</el-menu-item>
           <el-menu-item index="/airspace/apply-wizard">飞行计划申报向导</el-menu-item>
           <el-menu-item index="/airspace/approval">飞行申报进度台账</el-menu-item>
-          <el-menu-item index="/airspace/violation">涉企违规记录</el-menu-item>
         </el-sub-menu>
       </el-menu>
     </el-aside>

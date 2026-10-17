@@ -90,12 +90,6 @@ const routes: RouteRecordRaw[] = [
         name: 'FlightApproval',
         component: () => import('@/views/airspace/FlightApprovalView.vue'),
         meta: { title: '飞行申报审批台' }
-      },
-      {
-        path: 'airspace/violation',
-        name: 'ViolationCase',
-        component: () => import('@/views/airspace/ViolationCaseView.vue'),
-        meta: { title: '飞行违规处置中心' }
       }
     ]
   },
