@@ -295,13 +295,13 @@ const loadSafeRoute = () => {
 const handleValidate = async () => {
   checking.value = true
   try {
-    const res = await validateAirspaceRoute({
+    const res: any = await validateAirspaceRoute({
       routePoints: routePoints.value,
       altPlanned: form.value.altPlanned,
       startAt: timeRange.value[0]?.toISOString(),
       endAt: timeRange.value[1]?.toISOString()
     })
-    validationResult.value = res.data
+    validationResult.value = res?.data || res
     redrawRoute()
   } catch (error: any) {
     ElMessage.error(error.message || '碰撞校验失败')
@@ -324,7 +324,7 @@ const applySuggestedRoute = () => {
 const handleSubmitApply = async () => {
   submitting.value = true
   try {
-    const res = await createFlightApply({
+    const res: any = await createFlightApply({
       uavId: form.value.uavId,
       pilotId: form.value.pilotId,
       altPlanned: form.value.altPlanned,
@@ -332,7 +332,8 @@ const handleSubmitApply = async () => {
       endAt: timeRange.value[1]?.toISOString(),
       routePoints: routePoints.value
     })
-    ElMessage.success(`飞行计划申报提交成功！单号: ${res.data?.applySn}`)
+    const applySn = res?.applySn || res?.data?.applySn || 'FA已生成'
+    ElMessage.success(`飞行计划申报提交成功！单号: ${applySn}`)
     router.push('/airspace/approval')
   } catch (error: any) {
     ElMessage.error(error.message || '提交申报失败')
@@ -343,8 +344,8 @@ const handleSubmitApply = async () => {
 
 onMounted(async () => {
   try {
-    const res = await getAirspaceBlocks()
-    blocks.value = res.data || []
+    const res: any = await getAirspaceBlocks()
+    blocks.value = Array.isArray(res) ? res : (res?.data || [])
   } catch (error) {}
 })
 

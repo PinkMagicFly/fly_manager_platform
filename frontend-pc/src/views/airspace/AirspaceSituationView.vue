@@ -238,6 +238,8 @@ const renderAirspacePolygons = () => {
   if (!mapInstance || !polygonLayerGroup) return
   polygonLayerGroup.clearLayers()
 
+  const allBounds: L.LatLngBounds[] = []
+
   blocks.value.forEach(block => {
     if (block.blockKind === 1 && !filterForbidden.value) return
     if (block.blockKind === 2 && !filterLimited.value) return
@@ -265,17 +267,27 @@ const renderAirspacePolygons = () => {
     `
     polygon.bindPopup(popupContent)
     polygonLayerGroup!.addLayer(polygon)
+    allBounds.push(polygon.getBounds())
   })
+
+  // 如果有区块，自动平滑缩放至深圳市三区最佳视野
+  if (allBounds.length > 0 && mapInstance) {
+    let combinedBounds = allBounds[0]
+    for (let i = 1; i < allBounds.length; i++) {
+      combinedBounds.extend(allBounds[i])
+    }
+    mapInstance.fitBounds(combinedBounds.pad(0.15))
+  }
 }
 
 const loadData = async () => {
   try {
-    const res = await getAirspaceBlocks()
-    blocks.value = res.data || []
+    const res: any = await getAirspaceBlocks()
+    blocks.value = Array.isArray(res) ? res : (res?.data || [])
     renderAirspacePolygons()
 
-    const ruleRes = await getFenceRules()
-    fenceRules.value = ruleRes.data || []
+    const ruleRes: any = await getFenceRules()
+    fenceRules.value = Array.isArray(ruleRes) ? ruleRes : (ruleRes?.data || [])
   } catch (error) {
     ElMessage.error('加载空域管制数据失败')
   }

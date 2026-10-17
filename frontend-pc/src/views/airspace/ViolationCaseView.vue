@@ -161,11 +161,11 @@ const getLevelTag = (level: number) => {
 const loadData = async () => {
   loading.value = true
   try {
-    const res = await getViolationCaseList({
+    const res: any = await getViolationCaseList({
       violateKind: filterKind.value,
       punishState: filterState.value
     })
-    caseList.value = res.data || []
+    caseList.value = Array.isArray(res) ? res : (res?.data || [])
   } catch (error) {
     ElMessage.error('加载违规案件列表失败')
   } finally {
@@ -176,8 +176,8 @@ const loadData = async () => {
 const openDetailDialog = async (row: any) => {
   selectedCase.value = row
   try {
-    const res = await getViolationCaseDetail(row.caseId)
-    caseDetail.value = res.data
+    const res: any = await getViolationCaseDetail(row.caseId)
+    caseDetail.value = res?.data || res
     detailDialogVisible.value = true
   } catch (error) {
     ElMessage.error('获取案件详情失败')

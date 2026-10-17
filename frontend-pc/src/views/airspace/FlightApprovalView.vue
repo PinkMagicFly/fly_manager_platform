@@ -143,8 +143,8 @@ const getStatusTag = (state: number) => {
 const loadData = async () => {
   loading.value = true
   try {
-    const res = await getFlightApplyList({ approveState: filterState.value })
-    applyList.value = res.data || []
+    const res: any = await getFlightApplyList({ approveState: filterState.value })
+    applyList.value = Array.isArray(res) ? res : (res?.data || [])
   } catch (error) {
     ElMessage.error('加载申报列表失败')
   } finally {
@@ -267,8 +267,8 @@ const handleCancel = (row: any) => {
 onMounted(async () => {
   loadData()
   try {
-    const res = await getAirspaceBlocks()
-    blocks.value = res.data || []
+    const res: any = await getAirspaceBlocks()
+    blocks.value = Array.isArray(res) ? res : (res?.data || [])
   } catch (error) {}
 })
 
