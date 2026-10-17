@@ -1,0 +1,68 @@
+# ====================================================================
+# 翔云·低空智慧物流运营平台 (fly_manager_platform) 后端核心主配置文件
+# ====================================================================
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+    encoding:
+      charset: UTF-8
+      force: true
+
+spring:
+  profiles:
+    active: dev
+  application:
+    name: fly-manager-platform
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    default-property-inclusion: non_null
+
+# Sa-Token 配置
+sa-token:
+  token-name: satoken
+  # PC 端 Token 有效期 8 小时 (秒)
+  timeout: 28800
+  # 移动端 Token 活跃有效期 2 小时 (秒)
+  active-timeout: 7200
+  # 是否允许同一账号并发登录 (为 true 时新登录不挤掉旧登录)
+  is-concurrent: true
+  # 在多人登录同一账号时，是否共享同一个 token
+  is-share: false
+  # token 风格
+  token-style: uuid
+  # 是否输出操作日志
+  is-log: false
+  # 是否尝试从 cookie 中读取 token
+  is-read-cookie: true
+  # 是否尝试从 header 中读取 token
+  is-read-header: true
+
+# Knife4j OpenAPI 3 配置
+knife4j:
+  enable: true
+  openapi:
+    title: 翔云·低空智慧物流运营平台 API 接口规范
+    description: 涵盖账户权限、资产中心、空域合规、订单运营、在途监控与平台治理核心接口
+    version: v1.0.0
+    concat: SoarCloud Team
+    group:
+      default:
+        group-name: 全量业务接口
+        api-rule: package
+        api-rule-resources:
+          - com.fly.platform
+
+# MyBatis-Plus 全局配置
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  global-config:
+    db-config:
+      logic-delete-field: isDeleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false

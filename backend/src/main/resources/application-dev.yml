@@ -1,0 +1,33 @@
+# ====================================================================
+# 翔云·低空智慧物流运营平台 开发环境专属配置 (dev)
+# 默认支持 MySQL 8.0 (soarcloud_lae) 与 H2 嵌入模式
+# ====================================================================
+
+spring:
+  datasource:
+    # 默认使用 H2 内存模式，带 MySQL 语法兼容，启动即自动初始化 schema 与种子数据，无需外部依赖即可一键启动并运行
+    # 若本地已启动 MySQL 8.0，可切换为：jdbc:mysql://localhost:3306/soarcloud_lae?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:h2:mem:soarcloud_lae;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
+    driver-class-name: org.h2.Driver
+    username: root
+    password: 
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema-h2.sql
+      data-locations: classpath:data-h2.sql
+      encoding: UTF-8
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
+
+# 日志输出配置
+logging:
+  level:
+    root: INFO
+    com.fly.platform: DEBUG
+    org.springframework.web: INFO

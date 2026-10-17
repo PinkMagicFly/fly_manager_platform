@@ -1,0 +1,7 @@
+:root {
+  --primary-color: #165dff;
+  --bg-dark: #0f172a;
+}
+* {
+  box-sizing: border-box;
+}
