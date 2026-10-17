@@ -1,6 +1,8 @@
 package com.fly.platform.airspace.controller;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import cn.dev33.satoken.stp.StpUtil;
 import com.fly.platform.airspace.dto.FlightApplyCreateDTO;
 import com.fly.platform.airspace.dto.FlightApproveDTO;
@@ -57,9 +59,10 @@ public class FlightApplyController {
     }
 
     /**
-     * 空管在线审批处理（通过/驳回）
+     * 空管在线审批处理（通过/驳回）- 严格限制仅限空管监察员与超管
      */
     @SaCheckLogin
+    @SaCheckRole(value = {"ROLE_ATC", "ROLE_ADMIN"}, mode = SaMode.OR)
     @Audit(module = "飞行申报", action = "空管在线审批")
     @PostMapping("/approve")
     public Result<Void> approveApply(@Valid @RequestBody FlightApproveDTO dto) {
@@ -80,3 +83,4 @@ public class FlightApplyController {
         return Result.ok("飞行计划申报已撤销", null);
     }
 }
+

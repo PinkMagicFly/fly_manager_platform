@@ -1,5 +1,6 @@
 package com.fly.platform.airspace.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -24,8 +25,11 @@ public class AirspaceValidateDTO {
     private Integer altPlanned;
 
     /** 计划起飞时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime startAt;
 
     /** 计划降落时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime endAt;
 }
+

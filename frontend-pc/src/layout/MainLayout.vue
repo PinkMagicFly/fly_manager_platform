@@ -28,7 +28,7 @@
           <template #title><span>角色工作台</span></template>
         </el-menu-item>
 
-        <!-- 管理员专属菜单 -->
+        <!-- 1. 超级管理员专属：资质审核与系统审计 -->
         <el-sub-menu index="admin" v-if="isAdmin">
           <template #title>
             <el-icon><Stamp /></el-icon>
@@ -39,8 +39,8 @@
           <el-menu-item index="/admin/audit-logs">操作审计日志</el-menu-item>
         </el-sub-menu>
 
-        <!-- 商户专属菜单 -->
-        <el-sub-menu index="merchant" v-if="isMerchant">
+        <!-- 2. 商户/管理员专属：企业子账号组织管理 -->
+        <el-sub-menu index="merchant" v-if="isMerchant || isAdmin">
           <template #title>
             <el-icon><OfficeBuilding /></el-icon>
             <span>企业组织管理</span>
@@ -48,28 +48,39 @@
           <el-menu-item index="/merchant/sub-accounts">子账户与权限设置</el-menu-item>
         </el-sub-menu>
 
-        <!-- 机队资产中心 (阶段2核心底座) -->
-        <el-sub-menu index="asset">
+        <!-- 3. 机队资产中心 (商户/运维/管理员可见) -->
+        <el-sub-menu index="asset" v-if="isMerchant || isAdmin || isAtc">
           <template #title>
             <el-icon><Van /></el-icon>
             <span>机队资产中心</span>
           </template>
-          <el-menu-item index="/asset/uav">机队资产台账</el-menu-item>
+          <el-menu-item index="/asset/uav" v-if="isMerchant || isAdmin">机队资产台账</el-menu-item>
           <el-menu-item index="/asset/site">场站一张图</el-menu-item>
-          <el-menu-item index="/asset/crew">机组排班矩阵</el-menu-item>
-          <el-menu-item index="/asset/efficiency">资产效能分析</el-menu-item>
+          <el-menu-item index="/asset/crew" v-if="isMerchant || isAdmin">机组排班矩阵</el-menu-item>
+          <el-menu-item index="/asset/efficiency" v-if="isMerchant || isAdmin">资产效能分析</el-menu-item>
         </el-sub-menu>
 
-        <!-- 空域合规监管 (阶段3核心服务) -->
-        <el-sub-menu index="airspace">
+        <!-- 4. 空管/超管专属：空域合规监管工作台 (无申报向导) -->
+        <el-sub-menu index="airspace-atc" v-if="isAtc || isAdmin">
           <template #title>
             <el-icon><Compass /></el-icon>
             <span>空域合规监管</span>
           </template>
           <el-menu-item index="/airspace/situation">空域三区态势图</el-menu-item>
-          <el-menu-item index="/airspace/apply-wizard">飞行计划申报向导</el-menu-item>
-          <el-menu-item index="/airspace/approval">飞行申报审批台</el-menu-item>
+          <el-menu-item index="/airspace/approval">飞行计划审批台</el-menu-item>
           <el-menu-item index="/airspace/violation">飞行违规处置中心</el-menu-item>
+        </el-sub-menu>
+
+        <!-- 5. 商户专属：飞行申报与航线规划中枢 -->
+        <el-sub-menu index="airspace-merchant" v-if="isMerchant && !isAtc && !isAdmin">
+          <template #title>
+            <el-icon><Guide /></el-icon>
+            <span>空域与航线申报</span>
+          </template>
+          <el-menu-item index="/airspace/situation">空域管制态势图</el-menu-item>
+          <el-menu-item index="/airspace/apply-wizard">飞行计划申报向导</el-menu-item>
+          <el-menu-item index="/airspace/approval">飞行申报进度台账</el-menu-item>
+          <el-menu-item index="/airspace/violation">涉企违规记录</el-menu-item>
         </el-sub-menu>
       </el-menu>
     </el-aside>
@@ -134,6 +145,8 @@ const currentRouteTitle = computed(() => (route.meta.title as string) || '工作
 
 const isAdmin = computed(() => userStore.userInfo?.roles.includes('ROLE_ADMIN'))
 const isMerchant = computed(() => userStore.userInfo?.roles.includes('ROLE_MERCHANT') || userStore.userInfo?.accountKind === 2)
+const isAtc = computed(() => userStore.userInfo?.roles.includes('ROLE_ATC') || userStore.userInfo?.accountKind === 4)
+const isPilot = computed(() => userStore.userInfo?.roles.includes('ROLE_PILOT') || userStore.userInfo?.accountKind === 5)
 
 const roleText = computed(() => {
   if (userStore.userInfo?.roles.includes('ROLE_ADMIN')) return isMobile.value ? '超管' : '平台超级管理员'

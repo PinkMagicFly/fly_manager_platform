@@ -58,7 +58,7 @@
 
     <!-- 空域区块列表抽屉 -->
     <el-drawer v-model="drawerVisible" title="低空空域管制网格管理台账" size="480px">
-      <div class="drawer-header-btn">
+      <div class="drawer-header-btn" v-if="isAtcOrAdmin">
         <el-button type="primary" size="small" @click="openCreateDialog">
           <el-icon><Plus /></el-icon> 划设新管制区块
         </el-button>
@@ -76,7 +76,7 @@
             {{ row.limitAlt ? row.limitAlt + 'm' : '禁飞' }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="80" align="center">
+        <el-table-column label="操作" width="80" align="center" v-if="isAtcOrAdmin">
           <template #default="{ row }">
             <el-button type="danger" link size="small" @click="handleDeleteBlock(row)">删除</el-button>
           </template>
@@ -144,6 +144,12 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getAirspaceBlocks, deleteAirspaceBlock, saveAirspaceBlock, getFenceRules } from '@/api/airspace'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
+const isAdmin = computed(() => userStore.userInfo?.roles.includes('ROLE_ADMIN'))
+const isAtc = computed(() => userStore.userInfo?.roles.includes('ROLE_ATC') || userStore.userInfo?.accountKind === 4)
+const isAtcOrAdmin = computed(() => isAdmin.value || isAtc.value)
 
 const blocks = ref<any[]>([])
 const fenceRules = ref<any[]>([])

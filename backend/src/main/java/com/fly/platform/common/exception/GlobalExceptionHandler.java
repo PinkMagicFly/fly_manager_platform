@@ -47,6 +47,15 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * HTTP 报文与日期反序列化异常拦截
+     */
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public Result<Void> handleHttpMessageNotReadableException(org.springframework.http.converter.HttpMessageNotReadableException e) {
+        log.warn("HTTP报文反序列化异常: {}", e.getMessage());
+        return Result.fail(ResultCode.BAD_REQUEST.getCode(), "请求报文或日期时间格式解析异常，请检查输入格式");
+    }
+
+    /**
      * Sa-Token 未登录异常拦截
      */
     @ExceptionHandler(NotLoginException.class)

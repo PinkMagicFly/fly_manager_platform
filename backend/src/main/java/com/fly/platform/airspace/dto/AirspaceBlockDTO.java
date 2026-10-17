@@ -1,5 +1,6 @@
 package com.fly.platform.airspace.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -36,9 +37,11 @@ public class AirspaceBlockDTO {
     private Integer limitAlt;
 
     /** 管制生效起始时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime effectiveAt;
 
     /** 管制失效截止时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime expireAt;
 
     /** 数据来源渠道 */

@@ -51,6 +51,24 @@ public class FlightApplyServiceImpl implements FlightApplyService {
 
     @Override
     public List<FlightApplyVO> getApplyList(Long merchantId, Integer approveState) {
+        // RBAC 租户数据隔离：若当前登录人为商户且非超管/空管，强制锁定仅可查看本商户申报单
+        try {
+            if (cn.dev33.satoken.stp.StpUtil.isLogin()) {
+                List<String> roles = cn.dev33.satoken.stp.StpUtil.getRoleList();
+                if (roles.contains("ROLE_MERCHANT") && !roles.contains("ROLE_ADMIN") && !roles.contains("ROLE_ATC")) {
+                    Long loginId = cn.dev33.satoken.stp.StpUtil.getLoginIdAsLong();
+                    MerchantArchive ma = merchantArchiveMapper.selectOne(
+                            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MerchantArchive>()
+                                    .eq(MerchantArchive::getAccountId, loginId));
+                    if (ma != null) {
+                        merchantId = ma.getMerchantId();
+                    } else {
+                        merchantId = 1L;
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
         List<FlightApply> list = flightApplyMapper.selectApplyList(merchantId, approveState);
         List<FlightApplyVO> voList = new ArrayList<>(list.size());
         for (FlightApply apply : list) {

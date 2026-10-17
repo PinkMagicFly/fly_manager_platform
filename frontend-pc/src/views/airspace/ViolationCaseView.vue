@@ -56,7 +56,7 @@
             <el-button type="primary" link size="small" @click="openDetailDialog(row)">
               <el-icon><Document /></el-icon> 案件详情与轨迹
             </el-button>
-            <el-button v-if="row.punishState !== 2" type="danger" link size="small" @click="openPunishDialog(row)">
+            <el-button v-if="row.punishState !== 2 && isAtcOrAdmin" type="danger" link size="small" @click="openPunishDialog(row)">
               行政处罚
             </el-button>
           </template>
@@ -92,7 +92,7 @@
       </div>
       <template #footer>
         <el-button @click="detailDialogVisible = false">关闭</el-button>
-        <el-button v-if="caseDetail?.punishState !== 2" type="danger" @click="openPunishDialog(caseDetail)">
+        <el-button v-if="caseDetail?.punishState !== 2 && isAtcOrAdmin" type="danger" @click="openPunishDialog(caseDetail)">
           下达行政处罚通知书
         </el-button>
       </template>
@@ -127,11 +127,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getViolationCaseList, getViolationCaseDetail, handleViolationCase } from '@/api/airspace'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
+const isAdmin = computed(() => userStore.userInfo?.roles.includes('ROLE_ADMIN'))
+const isAtc = computed(() => userStore.userInfo?.roles.includes('ROLE_ATC') || userStore.userInfo?.accountKind === 4)
+const isAtcOrAdmin = computed(() => isAdmin.value || isAtc.value)
 
 const caseList = ref<any[]>([])
 const loading = ref(false)

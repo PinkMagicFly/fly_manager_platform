@@ -1,6 +1,8 @@
 package com.fly.platform.airspace.controller;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import cn.dev33.satoken.stp.StpUtil;
 import com.fly.platform.airspace.dto.ViolationHandleDTO;
 import com.fly.platform.airspace.service.ViolationCaseService;
@@ -44,9 +46,10 @@ public class ViolationCaseController {
     }
 
     /**
-     * 空管定责并下达行政处罚通知书
+     * 空管定责并下达行政处罚通知书 - 仅限空管监察员与超管
      */
     @SaCheckLogin
+    @SaCheckRole(value = {"ROLE_ATC", "ROLE_ADMIN"}, mode = SaMode.OR)
     @Audit(module = "违规处置", action = "下达行政处罚通知书")
     @PostMapping("/handle")
     public Result<Void> handleCase(@Valid @RequestBody ViolationHandleDTO dto) {
@@ -55,3 +58,4 @@ public class ViolationCaseController {
         return Result.ok("行政处罚决定书已生成并归档送达", null);
     }
 }
+

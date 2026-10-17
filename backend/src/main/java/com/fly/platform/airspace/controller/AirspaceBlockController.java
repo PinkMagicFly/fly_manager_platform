@@ -1,6 +1,8 @@
 package com.fly.platform.airspace.controller;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import com.fly.platform.airspace.dto.AirspaceBlockDTO;
 import com.fly.platform.airspace.dto.AirspaceValidateDTO;
 import com.fly.platform.airspace.entity.AirspaceBlock;
@@ -44,9 +46,10 @@ public class AirspaceBlockController {
     }
 
     /**
-     * 新增或编辑空域管制区块
+     * 新增或编辑空域管制区块 - 仅限空管监察员与超级管理员
      */
     @SaCheckLogin
+    @SaCheckRole(value = {"ROLE_ATC", "ROLE_ADMIN"}, mode = SaMode.OR)
     @Audit(module = "空域网格", action = "保存空域区块")
     @PostMapping("/blocks/save")
     public Result<AirspaceBlock> saveBlock(@Valid @RequestBody AirspaceBlockDTO dto) {
@@ -54,9 +57,10 @@ public class AirspaceBlockController {
     }
 
     /**
-     * 逻辑删除空域区块
+     * 逻辑删除空域区块 - 仅限空管监察员与超级管理员
      */
     @SaCheckLogin
+    @SaCheckRole(value = {"ROLE_ATC", "ROLE_ADMIN"}, mode = SaMode.OR)
     @Audit(module = "空域网格", action = "删除空域区块")
     @DeleteMapping("/blocks/delete/{id}")
     public Result<Void> deleteBlock(@PathVariable("id") Long id) {
@@ -64,3 +68,4 @@ public class AirspaceBlockController {
         return Result.ok("空域区块已删除", null);
     }
 }
+

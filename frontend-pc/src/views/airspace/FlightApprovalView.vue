@@ -58,7 +58,7 @@
             <el-button type="primary" link size="small" @click="openSimulationDialog(row)">
               <el-icon><View /></el-icon> 空间推演
             </el-button>
-            <template v-if="row.approveState === 0">
+            <template v-if="row.approveState === 0 && isAtcOrAdmin">
               <el-button type="success" link size="small" @click="handleQuickApprove(row, 1)">
                 通过
               </el-button>
@@ -88,7 +88,7 @@
       </div>
       <template #footer>
         <el-button @click="simDialogVisible = false">关闭推演</el-button>
-        <el-button v-if="currentApply?.approveState === 0" type="success" @click="handleQuickApprove(currentApply, 1)">
+        <el-button v-if="currentApply?.approveState === 0 && isAtcOrAdmin" type="success" @click="handleQuickApprove(currentApply, 1)">
           核准通过并锁定空域时段
         </el-button>
       </template>
@@ -115,11 +115,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getFlightApplyList, approveFlightApply, cancelFlightApply, getAirspaceBlocks } from '@/api/airspace'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
+const isAdmin = computed(() => userStore.userInfo?.roles.includes('ROLE_ADMIN'))
+const isAtc = computed(() => userStore.userInfo?.roles.includes('ROLE_ATC') || userStore.userInfo?.accountKind === 4)
+const isAtcOrAdmin = computed(() => isAdmin.value || isAtc.value)
 
 const applyList = ref<any[]>([])
 const loading = ref(false)

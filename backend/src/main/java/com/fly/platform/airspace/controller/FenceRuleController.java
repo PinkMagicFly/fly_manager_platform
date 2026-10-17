@@ -1,6 +1,8 @@
 package com.fly.platform.airspace.controller;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import com.fly.platform.airspace.dto.FenceRuleDTO;
 import com.fly.platform.airspace.entity.FenceRule;
 import com.fly.platform.airspace.service.FenceRuleService;
@@ -33,12 +35,14 @@ public class FenceRuleController {
     }
 
     /**
-     * 更新电子围栏规则参数
+     * 更新电子围栏规则参数 - 仅限空管与超管
      */
     @SaCheckLogin
+    @SaCheckRole(value = {"ROLE_ATC", "ROLE_ADMIN"}, mode = SaMode.OR)
     @Audit(module = "围栏规则", action = "更新围栏参数")
     @PutMapping("/update")
     public Result<FenceRule> updateRule(@Valid @RequestBody FenceRuleDTO dto) {
         return Result.ok("电子围栏规则已更新生效", fenceRuleService.updateRule(dto));
     }
 }
+
