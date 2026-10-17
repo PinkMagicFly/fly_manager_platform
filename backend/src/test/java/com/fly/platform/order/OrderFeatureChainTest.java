@@ -1,6 +1,9 @@
 package com.fly.platform.order;
 
+import com.fly.platform.airspace.dto.FlightApproveDTO;
+import com.fly.platform.airspace.enums.FlightApplyStateEnum;
 import com.fly.platform.airspace.mapper.FlightApplyMapper;
+import com.fly.platform.airspace.service.FlightApplyService;
 import com.fly.platform.asset.entity.UavInfo;
 import com.fly.platform.asset.enums.UavStateEnum;
 import com.fly.platform.asset.mapper.UavInfoMapper;
@@ -51,6 +54,9 @@ public class OrderFeatureChainTest {
 
     @Autowired
     private FlightApplyMapper flightApplyMapper;
+
+    @Autowired
+    private FlightApplyService flightApplyService;
 
     @Autowired
     private UavInfoMapper uavInfoMapper;
@@ -117,12 +123,24 @@ public class OrderFeatureChainTest {
         dispatchDTO.setPilotId(pilotId);
         dispatchDTO.setAltPlanned(110);
 
+        // 阶段5A新时序：提交飞行任务审批，不锁资源，订单停留 30 待调度
         CargoOrder dispatchedOrder = cargoOrderService.dispatchOrder(dispatchDTO, merchantId);
-        assertThat(dispatchedOrder.getOrderState()).isEqualTo(OrderStateEnum.PENDING_TAKEOFF.getCode());
+        assertThat(dispatchedOrder.getOrderState()).isEqualTo(OrderStateEnum.PENDING_DISPATCH.getCode());
         assertThat(dispatchedOrder.getApplyId()).isNotNull();
         assertThat(flightApplyMapper.selectApplyById(dispatchedOrder.getApplyId())).isNotNull();
 
-        // 节点 6：机长确认起飞 (40 -> 50 飞行中)
+        // 空管审批通过：空域时段确权 + 锁定资源，推进订单状态至 40 待起飞
+        FlightApproveDTO approveDTO = new FlightApproveDTO();
+        approveDTO.setApplyId(dispatchedOrder.getApplyId());
+        approveDTO.setApproveState(FlightApplyStateEnum.APPROVED.getCode());
+        approveDTO.setApproveNote("空管合规审核通过，准予起飞执飞");
+        approveDTO.setSuggestedAlt(110);
+        flightApplyService.approveApply(approveDTO, 3L);
+
+        CargoOrder approvedOrder = cargoOrderMapper.selectOrderById(orderId);
+        assertThat(approvedOrder.getOrderState()).isEqualTo(OrderStateEnum.PENDING_TAKEOFF.getCode());
+
+        // 节点 6：机长确认起飞 (40 -> 50 飞行中，校验关联任务=已批准)
         CargoOrder flyingOrder = cargoOrderService.takeoffOrder(orderId, pilotId);
         assertThat(flyingOrder.getOrderState()).isEqualTo(OrderStateEnum.FLYING.getCode());
         // 节点 7：送达签收与自动出账 (50 -> 60 已送达)

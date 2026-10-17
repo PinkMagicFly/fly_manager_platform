@@ -297,6 +297,7 @@ CREATE TABLE flight_apply (
   apply_id BIGINT AUTO_INCREMENT PRIMARY KEY,
   apply_sn VARCHAR(24) NOT NULL UNIQUE,
   order_id BIGINT,
+  order_id_unique BIGINT GENERATED ALWAYS AS (CASE WHEN order_id > 0 THEN order_id ELSE NULL END) UNIQUE,
   merchant_id BIGINT NOT NULL,
   uav_id BIGINT NOT NULL,
   pilot_id BIGINT NOT NULL,

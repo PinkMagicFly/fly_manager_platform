@@ -11,8 +11,11 @@
             <el-radio-group v-model="filterState" size="small" @change="loadData">
               <el-radio-button :value="undefined">全部申报</el-radio-button>
               <el-radio-button :value="0">待审批队列</el-radio-button>
-              <el-radio-button :value="1">已通过</el-radio-button>
+              <el-radio-button :value="1">已批准</el-radio-button>
               <el-radio-button :value="2">已驳回</el-radio-button>
+              <el-radio-button :value="4">执行中</el-radio-button>
+              <el-radio-button :value="5">已完成</el-radio-button>
+              <el-radio-button :value="3">已取消</el-radio-button>
             </el-radio-group>
           </div>
         </div>
@@ -97,12 +100,12 @@
     <!-- 驳回说明弹窗 -->
     <el-dialog v-model="rejectDialogVisible" title="空管合规审批驳回决策" width="460px">
       <el-form label-position="top">
-        <el-form-item label="驳回原因或修改建议" required>
+        <el-form-item label="驳回原因或修改建议（必填）" required>
           <el-input
             v-model="rejectNote"
             type="textarea"
             :rows="3"
-            placeholder="如：该时段周边有重要民航航道保障任务，建议顺延起飞时间或降低高度至80米以下"
+            placeholder="请输入详细驳回理由，如：该时段周边有重要民航航道保障任务，建议顺延起飞时间或降低高度至80米以下"
           />
         </el-form-item>
       </el-form>
@@ -141,8 +144,11 @@ let simMap: L.Map | null = null
 
 const getStatusTag = (state: number) => {
   if (state === 0) return 'warning'
-  if (state === 1) return 'success'
+  if (state === 1) return 'primary'
   if (state === 2) return 'danger'
+  if (state === 3) return 'info'
+  if (state === 4) return 'warning'
+  if (state === 5) return 'success'
   return 'info'
 }
 
@@ -224,16 +230,20 @@ const initSimMap = () => {
 }
 
 const handleQuickApprove = (row: any, state: number) => {
-  ElMessageBox.confirm(`确认批准飞行计划【${row.applySn}】吗？通过后将正式锁定该航线空域时段。`, '审批确认', {
-    type: 'success',
-    confirmButtonText: '核准通过'
-  }).then(async () => {
+  ElMessageBox.confirm(
+    `确认批准飞行计划【${row.applySn}】吗？\n审批通过将执行空域时段确权、排他性锁定无人机与场站机位，并推进订单状态至【待执飞】。`,
+    '空管审批核准确认',
+    {
+      type: 'success',
+      confirmButtonText: '核准通过并锁定资源'
+    }
+  ).then(async () => {
     await approveFlightApply({
       applyId: row.applyId,
       approveState: state,
-      approveNote: '空管合规审核通过，准予起飞执行'
+      approveNote: '空管合规审核通过，空域时段已确权，准予起飞执飞'
     })
-    ElMessage.success('审批决策已下达并存证，单据状态变更为【已通过】！')
+    ElMessage.success('审批决策已下达并存证，单据状态变更为【已批准】，资源已正式锁定！')
     simDialogVisible.value = false
     await loadData()
   })
@@ -241,21 +251,21 @@ const handleQuickApprove = (row: any, state: number) => {
 
 const openRejectDialog = (row: any) => {
   currentApply.value = row
-  rejectNote.value = '空域临时管制时段冲突，建议修改时段重新申报'
+  rejectNote.value = ''
   rejectDialogVisible.value = true
 }
 
 const submitReject = async () => {
-  if (!rejectNote.value.trim()) {
-    ElMessage.warning('请输入驳回原因')
+  if (!rejectNote.value || !rejectNote.value.trim()) {
+    ElMessage.error('驳回原因必填，请详细说明驳回理由！')
     return
   }
   await approveFlightApply({
     applyId: currentApply.value.applyId,
     approveState: 2,
-    approveNote: rejectNote.value
+    approveNote: rejectNote.value.trim()
   })
-  ElMessage.warning('申报单已驳回')
+  ElMessage.warning('申报单已驳回，相关资源已解除，订单保留在待调度状态')
   rejectDialogVisible.value = false
   await loadData()
 }

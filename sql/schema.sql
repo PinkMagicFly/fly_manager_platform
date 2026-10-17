@@ -365,6 +365,7 @@ route_line LINESTRING NOT NULL COMMENT '规划飞行航线（空间折线）',
   PRIMARY KEY (apply_id),
   UNIQUE KEY uk_aapply_sn (apply_sn),
   KEY idx_apply_order (order_id),
+  UNIQUE KEY uk_flight_apply_order ((IF(order_id > 0, order_id, NULL))),
   KEY idx_apply_state (approve_state),
   SPATIAL KEY idx_apply_route (
 route_line)

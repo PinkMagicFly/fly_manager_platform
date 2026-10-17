@@ -3,7 +3,7 @@
     <div class="workbench-header">
       <div class="header-left">
         <span class="workbench-title"><el-icon><Compass /></el-icon> 智能调度中枢工作台</span>
-        <el-tag type="primary" effect="dark" size="small">实时联动飞行申报</el-tag>
+        <el-tag type="primary" effect="dark" size="small">实时提交飞行任务审批</el-tag>
         <span class="sub-text">高德底座地图 / 排他性算法匹配</span>
       </div>
       <div class="header-right">
@@ -51,7 +51,7 @@
 
       <!-- 右栏：决策面板 -->
       <div class="right-panel" v-loading="loadingRecommend">
-        <div class="panel-head"><span>智能派单决策</span></div>
+        <div class="panel-head"><span>智能调度方案与任务申报</span></div>
         <div v-if="!selectedOrder" class="empty-box"><el-empty description="请选择待调度运单" :image-size="80" /></div>
         <div v-else class="recommend-content">
           <div class="summary-card">
@@ -110,7 +110,7 @@
             </el-form-item>
 
             <el-button type="primary" size="large" :loading="dispatching" style="width: 100%; margin-top: 10px" @click="submitDispatch">
-              <el-icon><Check /></el-icon> 确认调度派单并联动申报
+              <el-icon><Check /></el-icon> 提交飞行任务审批
             </el-button>
           </el-form>
         </div>
@@ -259,15 +259,15 @@ const submitDispatch = async () => {
   try {
     const res: any = await dispatchOrder(dispatchForm)
     ElMessageBox.alert(
-      `运单 [${selectedOrder.value?.orderSn}] 调度确认完成！\n已锁定执飞无人机，并自动联动生成飞行计划申报单。\n运单状态已跃迁为【40 待起飞】。`,
-      '调度派单成功',
-      { type: 'success', confirmButtonText: '查看详情 / 继续派单' }
+      `运单 [${selectedOrder.value?.orderSn}] 飞行任务申请已成功提交！\n任务编号已生成（处于待空管合规审批，未锁定资源），订单保留在【待调度】状态。\n空管审批通过后将正式确权时段、锁定资源并推进订单至【待执飞】。`,
+      '提交飞行任务审批成功',
+      { type: 'success', confirmButtonText: '确定 / 继续调度' }
     )
     selectedOrder.value = null
     recommendData.value = null
     loadPendingOrders()
   } catch (err: any) {
-    ElMessage.error(err.message || '调度派单失败')
+    ElMessage.error(err.message || '提交飞行任务审批失败')
   } finally {
     dispatching.value = false
   }

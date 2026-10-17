@@ -72,7 +72,7 @@ const tabList = [
   { val: 'ALL', label: '全部' },
   { val: '20', label: '待接单' },
   { val: '30', label: '待调度' },
-  { val: '40', label: '待起飞' },
+  { val: '40', label: '待执飞' },
   { val: '50', label: '飞行中' },
   { val: '60', label: '已送达' }
 ]

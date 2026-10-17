@@ -28,14 +28,14 @@
 
       <el-tabs v-model="activeTab" @tab-change="handleTabChange" class="order-tabs">
         <el-tab-pane label="全量看板" name="ALL" />
-        <el-tab-pane label="10 待支付" name="10" />
-        <el-tab-pane label="20 待接单" name="20" />
-        <el-tab-pane label="30 待调度" name="30" />
-        <el-tab-pane label="40 待起飞" name="40" />
-        <el-tab-pane label="50 飞行中" name="50" />
-        <el-tab-pane label="60 已送达" name="60" />
-        <el-tab-pane label="70 已取消" name="70" />
-        <el-tab-pane label="80 异常中断" name="80" />
+        <el-tab-pane label="待支付" name="10" />
+        <el-tab-pane label="待接单" name="20" />
+        <el-tab-pane label="待调度" name="30" />
+        <el-tab-pane label="待执飞" name="40" />
+        <el-tab-pane label="飞行中" name="50" />
+        <el-tab-pane label="已送达" name="60" />
+        <el-tab-pane label="已取消" name="70" />
+        <el-tab-pane label="异常中断" name="80" />
       </el-tabs>
 
       <el-table v-loading="loading" :data="orderList" row-key="orderId" stripe style="width: 100%" @selection-change="handleSelectionChange">

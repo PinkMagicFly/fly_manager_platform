@@ -1,6 +1,8 @@
 package com.fly.platform.order.service.impl;
 
+import com.fly.platform.airspace.domain.FlightApplyStateMachine;
 import com.fly.platform.airspace.entity.FlightApply;
+import com.fly.platform.airspace.enums.FlightApplyStateEnum;
 import com.fly.platform.airspace.mapper.FlightApplyMapper;
 import com.fly.platform.airspace.service.FlightApplyService;
 import com.fly.platform.airspace.vo.FlightApplyVO;
@@ -51,6 +53,7 @@ public class CargoOrderServiceImpl implements CargoOrderService {
     private final FeeCalculatorService feeCalculatorService;
     private final SmartDispatchRecommendService smartDispatchRecommendService;
     private final CargoOrderStateMachine stateMachine;
+    private final FlightApplyStateMachine flightApplyStateMachine;
 
     @Override
     public FeeCalculateVO calculateFee(FeeCalculateDTO dto) {
@@ -163,45 +166,74 @@ public class CargoOrderServiceImpl implements CargoOrderService {
         CargoOrder order = cargoOrderMapper.selectOrderById(dto.getOrderId());
         if (order == null) throw new BusinessException(404, "订单不存在");
 
+        if (!OrderStateEnum.PENDING_DISPATCH.getCode().equals(order.getOrderState())) {
+            throw new BusinessException(400, "只有待调度状态的运单才允许提交飞行任务审批");
+        }
+
         UavInfo uav = uavInfoMapper.selectById(dto.getUavId());
         if (uav == null) throw new BusinessException(404, "指派无人机不存在");
-        if (uav.getState() != null && uav.getState() != UavStateEnum.IDLE.getCode()) {
-            throw new BusinessException(400, "指派无人机当前非闲置可用状态，不可派单");
-        }
+        // 注意：G1 语义重排，提交任务不锁资源不动订单，待空管审批通过时才时段锁定确权
 
         CrewStaff pilot = crewStaffMapper.selectById(dto.getPilotId());
         if (pilot == null) throw new BusinessException(404, "指派执飞机长不存在");
 
+        // G6 防重检查：如果该订单已存在非终态飞行任务，禁止重复提交
+        FlightApply existingApply = flightApplyMapper.selectByOrderId(order.getOrderId());
+        if (existingApply != null && !FlightApplyStateEnum.isTerminal(existingApply.getApproveState())) {
+            throw new BusinessException(400, "该订单已存在进行中的飞行任务，禁止重复提交");
+        }
+
+        LocalDateTime startAt = dto.getStartAt() != null ? dto.getStartAt() : LocalDateTime.now().plusMinutes(15);
+        LocalDateTime endAt = dto.getEndAt() != null ? dto.getEndAt() : LocalDateTime.now().plusMinutes(45);
+        String routeLine = String.format("LINESTRING(%.6f %.6f, %.6f %.6f)",
+                order.getSenderLng(), order.getSenderLat(), order.getReceiverLng(), order.getReceiverLat());
+        int altPlanned = dto.getAltPlanned() != null ? dto.getAltPlanned() : 100;
+
         String applySn = "FA" + DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now())
                 + (int) (Math.random() * 9000 + 1000);
 
-        FlightApply apply = new FlightApply();
-        apply.setApplySn(applySn);
-        apply.setOrderId(order.getOrderId());
-        apply.setMerchantId(order.getMerchantId() != null ? order.getMerchantId() : 1L);
-        apply.setUavId(dto.getUavId());
-        apply.setPilotId(dto.getPilotId());
-        apply.setRouteLine(String.format("LINESTRING(%.6f %.6f, %.6f %.6f)",
-                order.getSenderLng(), order.getSenderLat(), order.getReceiverLng(), order.getReceiverLat()));
-        apply.setAltPlanned(dto.getAltPlanned() != null ? dto.getAltPlanned() : 100);
-        apply.setStartAt(dto.getStartAt() != null ? dto.getStartAt() : LocalDateTime.now().plusMinutes(15));
-        apply.setEndAt(dto.getEndAt() != null ? dto.getEndAt() : LocalDateTime.now().plusMinutes(45));
-        apply.setCheckState(1);
-        apply.setApproveState(0);
-        apply.initAudit();
+        FlightApply apply;
+        if (existingApply != null) {
+            // 驳回重报：复用并更新该申报单为待审批
+            apply = existingApply;
+            apply.setApplySn(applySn);
+            apply.setUavId(dto.getUavId());
+            apply.setPilotId(dto.getPilotId());
+            apply.setRouteLine(routeLine);
+            apply.setAltPlanned(altPlanned);
+            apply.setStartAt(startAt);
+            apply.setEndAt(endAt);
+            apply.setCheckState(1);
+            apply.setApproveState(FlightApplyStateEnum.PENDING.getCode());
+            apply.setApproverId(null);
+            apply.setApproveNote(null);
+            apply.setApproveAt(null);
+            flightApplyMapper.updateApplyContent(apply);
+        } else {
+            // 首次提交飞行任务申报单
+            apply = new FlightApply();
+            apply.setApplySn(applySn);
+            apply.setOrderId(order.getOrderId());
+            apply.setMerchantId(order.getMerchantId() != null ? order.getMerchantId() : 1L);
+            apply.setUavId(dto.getUavId());
+            apply.setPilotId(dto.getPilotId());
+            apply.setRouteLine(routeLine);
+            apply.setAltPlanned(altPlanned);
+            apply.setStartAt(startAt);
+            apply.setEndAt(endAt);
+            apply.setCheckState(1);
+            apply.setApproveState(FlightApplyStateEnum.PENDING.getCode());
+            apply.initAudit();
+            flightApplyMapper.insertApply(apply);
+        }
 
-        flightApplyMapper.insertApply(apply);
-
-        stateMachine.transition(order, OrderStateEnum.PENDING_TAKEOFF.getCode(), operatorId,
-                "调度确认完成，指派机号[" + uav.getUavSn() + "]与机长[" + pilot.getRealName() + "]，已自动联动生成飞行申报单: " + applySn,
-                orderStateFlowMapper);
-
-        cargoOrderMapper.updateOrderDispatch(order.getOrderId(), OrderStateEnum.PENDING_TAKEOFF.getCode(),
+        // G1 语义重排：提交飞行任务，不锁资源、订单停留待调度30
+        cargoOrderMapper.updateOrderDispatch(order.getOrderId(), OrderStateEnum.PENDING_DISPATCH.getCode(),
                 dto.getUavId(), apply.getApplyId());
 
         order.setUavId(dto.getUavId());
         order.setApplyId(apply.getApplyId());
-        log.info("调度派单成功: orderId={}, applyId={}, applySn={}", order.getOrderId(), apply.getApplyId(), applySn);
+        log.info("提交飞行任务成功: orderId={}, applyId={}, applySn={}, 订单停留待调度30", order.getOrderId(), apply.getApplyId(), applySn);
         return order;
     }
 
@@ -211,11 +243,30 @@ public class CargoOrderServiceImpl implements CargoOrderService {
         CargoOrder order = cargoOrderMapper.selectOrderById(orderId);
         if (order == null) throw new BusinessException(404, "订单不存在");
 
+        // G4 起飞守卫：校验关联任务=1已批准
+        if (order.getApplyId() == null) {
+            throw new BusinessException(400, "起飞守卫拦截：订单未关联飞行任务，无法起飞");
+        }
+        FlightApply apply = flightApplyMapper.selectApplyById(order.getApplyId());
+        if (apply == null) {
+            throw new BusinessException(404, "起飞守卫拦截：关联飞行任务不存在");
+        }
+        if (!FlightApplyStateEnum.APPROVED.getCode().equals(apply.getApproveState())) {
+            throw new BusinessException(400, String.format("起飞守卫拦截：关联飞行任务必须为【已批准】状态才允许起飞，当前任务状态为【%s】",
+                    FlightApplyStateEnum.getDescByCode(apply.getApproveState())));
+        }
+
+        // 联动任务状态 -> 4 执行中
+        flightApplyStateMachine.startExecute(apply);
+        flightApplyMapper.updateApproveState(apply);
+
+        // 联动无人机状态 -> 1 任务中
         if (order.getUavId() != null) {
             uavService.changeUavState(order.getUavId(), UavStateEnum.ON_TASK.getCode(), "指派运单确认起飞执飞中");
         }
 
-        stateMachine.transition(order, OrderStateEnum.FLYING.getCode(), operatorId, "机长确认起飞执行在途货运配送", orderStateFlowMapper);
+        // 联动订单状态 -> 50 飞行中
+        stateMachine.transition(order, OrderStateEnum.FLYING.getCode(), operatorId, "机长确认起飞执行在途货运配送，飞行任务已进入执行中", orderStateFlowMapper);
         cargoOrderMapper.updateOrderState(orderId, order.getOrderState(), null);
         return order;
     }
@@ -226,7 +277,16 @@ public class CargoOrderServiceImpl implements CargoOrderService {
         CargoOrder order = cargoOrderMapper.selectOrderById(orderId);
         if (order == null) throw new BusinessException(404, "订单不存在");
 
-        stateMachine.transition(order, OrderStateEnum.DELIVERED.getCode(), operatorId, "目的地精准降落完成签收", orderStateFlowMapper);
+        // G4 送达联动：任务 -> 5 已完成
+        if (order.getApplyId() != null) {
+            FlightApply apply = flightApplyMapper.selectApplyById(order.getApplyId());
+            if (apply != null) {
+                flightApplyStateMachine.complete(apply);
+                flightApplyMapper.updateApproveState(apply);
+            }
+        }
+
+        stateMachine.transition(order, OrderStateEnum.DELIVERED.getCode(), operatorId, "目的地精准降落完成签收，飞行任务已圆满完成", orderStateFlowMapper);
         cargoOrderMapper.updateOrderState(orderId, order.getOrderState(), null);
 
         if (order.getUavId() != null) {

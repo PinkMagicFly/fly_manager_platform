@@ -14,13 +14,20 @@ import com.fly.platform.airspace.vo.AirspaceValidateResultVO;
 import com.fly.platform.airspace.vo.FlightApplyVO;
 import com.fly.platform.asset.entity.CrewStaff;
 import com.fly.platform.asset.entity.UavInfo;
+import com.fly.platform.asset.entity.SiteBooking;
 import com.fly.platform.asset.mapper.CrewStaffMapper;
+import com.fly.platform.asset.mapper.SiteBookingMapper;
 import com.fly.platform.asset.mapper.UavInfoMapper;
 import com.fly.platform.auth.entity.MerchantArchive;
 import com.fly.platform.auth.entity.UamAccount;
 import com.fly.platform.auth.mapper.MerchantArchiveMapper;
 import com.fly.platform.auth.mapper.UamAccountMapper;
 import com.fly.platform.common.exception.BusinessException;
+import com.fly.platform.order.domain.CargoOrderStateMachine;
+import com.fly.platform.order.entity.CargoOrder;
+import com.fly.platform.order.enums.OrderStateEnum;
+import com.fly.platform.order.mapper.CargoOrderMapper;
+import com.fly.platform.order.mapper.OrderStateFlowMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,6 +55,10 @@ public class FlightApplyServiceImpl implements FlightApplyService {
     private final UavInfoMapper uavInfoMapper;
     private final CrewStaffMapper crewStaffMapper;
     private final UamAccountMapper accountMapper;
+    private final CargoOrderMapper cargoOrderMapper;
+    private final OrderStateFlowMapper orderStateFlowMapper;
+    private final CargoOrderStateMachine cargoOrderStateMachine;
+    private final SiteBookingMapper siteBookingMapper;
 
     @Override
     public List<FlightApplyVO> getApplyList(Long merchantId, Integer approveState) {
@@ -117,6 +128,14 @@ public class FlightApplyServiceImpl implements FlightApplyService {
             throw new BusinessException(400, "申报航线违规穿越法定禁飞区，系统阻断申报，请在地图上重新调整航路点避开禁飞区！");
         }
 
+        // G6 防重：关联订单时检查是否存在进行中的任务
+        if (dto.getOrderId() != null && dto.getOrderId() > 0) {
+            FlightApply existing = flightApplyMapper.selectByOrderId(dto.getOrderId());
+            if (existing != null && !FlightApplyStateEnum.isTerminal(existing.getApproveState())) {
+                throw new BusinessException(400, "该订单已存在进行中的飞行任务，禁止重复提交");
+            }
+        }
+
         FlightApply apply = new FlightApply();
         apply.setApplySn(generateApplySn());
         apply.setOrderId(dto.getOrderId() != null ? dto.getOrderId() : 0L);
@@ -159,8 +178,69 @@ public class FlightApplyServiceImpl implements FlightApplyService {
                 ? FlightApplyStateEnum.APPROVED
                 : FlightApplyStateEnum.REJECTED;
 
-        stateMachine.transition(apply, targetState, approverId, dto.getApproveNote(), dto.getSuggestedAlt());
+        if (FlightApplyStateEnum.REJECTED.equals(targetState)) {
+            // G3 驳回原因必填（Service 双重校验）
+            if (dto.getApproveNote() == null || dto.getApproveNote().trim().isEmpty()) {
+                throw new BusinessException(400, "驳回原因必填，请详细说明驳回理由");
+            }
+            stateMachine.transition(apply, targetState, approverId, dto.getApproveNote().trim(), null);
+            flightApplyMapper.updateApproveState(apply);
+            // 驳回时订单停留待调度30，资源零占用，无需回退
+            return;
+        }
+
+        // G1 审批通过回调：
+        // 1. 空域时段确权 + 锁定无人机（校验同一无人机同一时段无其他已批准任务）
+        if (apply.getUavId() != null && apply.getStartAt() != null && apply.getEndAt() != null) {
+            List<FlightApply> conflicts = flightApplyMapper.selectOverlappingApprovedTasks(
+                    apply.getUavId(), apply.getStartAt(), apply.getEndAt(), apply.getApplyId());
+            if (conflicts != null && !conflicts.isEmpty()) {
+                throw new BusinessException(400, String.format("无人机时段冲突拦截：机号ID[%d]在所选时段已被任务【%s】锁定占用，不可重复批准！",
+                        apply.getUavId(), conflicts.get(0).getApplySn()));
+            }
+        }
+
+        // 2. 机长可用性核实
+        if (apply.getPilotId() != null) {
+            CrewStaff pilot = crewStaffMapper.selectById(apply.getPilotId());
+            if (pilot == null) {
+                throw new BusinessException(404, "指派执飞机长不存在");
+            }
+        }
+
+        // 3. 场站预约落地
+        Long siteId = 1L;
+        if (apply.getUavId() != null) {
+            UavInfo uav = uavInfoMapper.selectById(apply.getUavId());
+            if (uav != null && uav.getHomeSiteId() != null && uav.getHomeSiteId() > 0) {
+                siteId = uav.getHomeSiteId();
+            }
+        }
+        SiteBooking booking = new SiteBooking();
+        booking.setSiteId(siteId);
+        booking.setUavId(apply.getUavId() != null ? apply.getUavId() : 1L);
+        booking.setApplyId(apply.getApplyId());
+        booking.setStartTime(apply.getStartAt() != null ? apply.getStartAt() : java.time.LocalDateTime.now());
+        booking.setEndTime(apply.getEndAt() != null ? apply.getEndAt() : java.time.LocalDateTime.now().plusHours(1));
+        booking.setBookingState(1); // 1-已预约
+        booking.initAudit();
+        siteBookingMapper.insert(booking);
+
+        // 4. 驱动任务状态机流转为已批准
+        stateMachine.transition(apply, FlightApplyStateEnum.APPROVED, approverId, dto.getApproveNote(), dto.getSuggestedAlt());
         flightApplyMapper.updateApproveState(apply);
+
+        // 5. 联动订单状态跃迁：若关联履约订单（order_id > 0），推进订单 30 -> 40 并写入状态变迁流水
+        if (apply.getOrderId() != null && apply.getOrderId() > 0) {
+            CargoOrder order = cargoOrderMapper.selectOrderById(apply.getOrderId());
+            if (order != null && OrderStateEnum.PENDING_DISPATCH.getCode().equals(order.getOrderState())) {
+                cargoOrderStateMachine.transition(order, OrderStateEnum.PENDING_TAKEOFF.getCode(), approverId,
+                        "飞行计划空管审批通过，空域时段确权完成，资源正式锁定，运单推进至待起飞 (任务编号: " + apply.getApplySn() + ")",
+                        orderStateFlowMapper);
+                cargoOrderMapper.updateOrderDispatch(order.getOrderId(), OrderStateEnum.PENDING_TAKEOFF.getCode(),
+                        apply.getUavId(), apply.getApplyId());
+            }
+        }
     }
 
     @Override
@@ -175,6 +255,12 @@ public class FlightApplyServiceImpl implements FlightApplyService {
         }
         stateMachine.cancel(apply, operatorId);
         flightApplyMapper.updateApproveState(apply);
+
+        // 释放可能已绑定的场站预约
+        siteBookingMapper.update(null,
+                new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<SiteBooking>()
+                        .eq(SiteBooking::getApplyId, applyId)
+                        .set(SiteBooking::getBookingState, 4)); // 4-已取消
     }
 
     private FlightApplyVO convertToVO(FlightApply apply) {
