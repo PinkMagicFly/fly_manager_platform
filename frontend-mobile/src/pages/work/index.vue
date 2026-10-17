@@ -2,7 +2,7 @@
   <view class="m-work-container">
     <view class="top-bar">
       <view class="brand-text">
-        <text class="title">翔云·移动作业工作台</text>
+        <text class="title">{{ currentRoleTitle }}工作台</text>
         <text class="env-tag">Client-Kind: app</text>
       </view>
       <view class="logout-btn" @click="handleLogout">退出</view>
@@ -189,15 +189,28 @@ const roleStats = computed(() => {
   ]
 })
 
+const updateNavigationBarTitle = () => {
+  let title = '移动作业端'
+  if (isPilot.value) title = '外场机长执飞中枢'
+  else if (isMaintainer.value) title = '场站设备维保工作台'
+  else if (isCustomer.value) title = '低空即时寄件中心'
+  else title = '商户机队运营总览'
+  uni.setNavigationBarTitle({ title })
+}
+
 const fetchUser = async () => {
   const cached = uni.getStorageSync('soarcloud_mobile_user')
   if (cached) {
-    try { user.value = JSON.parse(cached) } catch (e) {}
+    try {
+      user.value = JSON.parse(cached)
+      updateNavigationBarTitle()
+    } catch (e) {}
   }
   try {
     const fresh: any = await request.get('/api/v1/auth/current-user')
     user.value = fresh
     uni.setStorageSync('soarcloud_mobile_user', JSON.stringify(fresh))
+    updateNavigationBarTitle()
   } catch (err) {}
 }
 

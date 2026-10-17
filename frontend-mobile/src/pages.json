@@ -18,7 +18,7 @@
     {
       "path": "pages/work/index",
       "style": {
-        "navigationBarTitleText": "外场机长作业中枢",
+        "navigationBarTitleText": "翔云·低空移动作业端",
         "navigationBarBackgroundColor": "#0284c7",
         "navigationBarTextStyle": "white"
       }
