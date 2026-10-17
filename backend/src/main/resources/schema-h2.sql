@@ -1,3 +1,8 @@
+-- 注册 MySQL 空间函数别名（支持 ST_AsText 与 ST_GeomFromText）
+CREATE ALIAS IF NOT EXISTS ST_ASTEXT FOR "com.fly.platform.common.util.GeoUtils.stAsText";
+CREATE ALIAS IF NOT EXISTS ST_GEOMFROMTEXT FOR "com.fly.platform.common.util.GeoUtils.stGeomFromText";
+
+
 -- H2 数据库兼容模式建表脚本
 DROP TABLE IF EXISTS uam_account;
 CREATE TABLE uam_account (

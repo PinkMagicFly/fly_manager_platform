@@ -118,9 +118,9 @@ public class AirspaceBlockServiceImpl implements AirspaceBlockService {
         }
 
         if (block.getBlockId() != null) {
-            airspaceBlockMapper.updateById(block);
+            airspaceBlockMapper.updateBlock(block);
         } else {
-            airspaceBlockMapper.insert(block);
+            airspaceBlockMapper.insertBlock(block);
         }
         return block;
     }

@@ -4,6 +4,7 @@ import com.fly.platform.airspace.domain.AirspaceCollisionEngine;
 import com.fly.platform.airspace.dto.AirspaceValidateDTO;
 import com.fly.platform.airspace.entity.AirspaceBlock;
 import com.fly.platform.airspace.enums.AirspaceKindEnum;
+import com.fly.platform.airspace.mapper.AirspaceBlockMapper;
 import com.fly.platform.airspace.service.AirspaceBlockService;
 import com.fly.platform.airspace.vo.AirspaceValidateResultVO;
 import org.junit.jupiter.api.DisplayName;
@@ -30,6 +31,9 @@ public class AirspaceCollisionServiceTest {
 
     @Autowired
     private AirspaceBlockService airspaceBlockService;
+
+    @Autowired
+    private AirspaceBlockMapper airspaceBlockMapper;
 
     @Autowired
     private AirspaceCollisionEngine collisionEngine;
@@ -143,4 +147,16 @@ public class AirspaceCollisionServiceTest {
         AirspaceValidateResultVO resultAfter = airspaceBlockService.validateRoute(dto);
         assertThat(resultAfter.getPass()).isTrue();
     }
+
+    @Test
+    @DisplayName("测试5：空域管制区块 WKT 空间多边形点序列解析校验（点数量>=3，排除二进制格式乱码）")
+    public void testAirspacePolygonPointParsing() {
+        List<AirspaceBlock> blocks = airspaceBlockMapper.selectAllActiveBlocks();
+        assertThat(blocks).isNotEmpty();
+        for (AirspaceBlock block : blocks) {
+            List<List<Double>> points = block.parsePolygonPoints();
+            assertThat(points.size()).as("区块 " + block.getBlockName() + " 解析多边形点数必须>=3").isGreaterThanOrEqualTo(3);
+        }
+    }
 }
+

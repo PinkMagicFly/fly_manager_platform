@@ -266,6 +266,20 @@ const renderAirspacePolygons = () => {
       </div>
     `
     polygon.bindPopup(popupContent)
+
+    // 添加永久居中高亮名称与限高气泡标牌，一目了然
+    const badgeText = block.blockKind === 1
+      ? `🔴 ${block.blockName} (永久禁飞)`
+      : (block.blockKind === 2
+          ? `🟠 ${block.blockName} (限高${block.limitAlt}m)`
+          : `🟡 ${block.blockName} (赛事临时管制${block.limitAlt}m)`)
+
+    polygon.bindTooltip(badgeText, {
+      permanent: true,
+      direction: 'center',
+      className: 'airspace-zone-tooltip'
+    })
+
     polygonLayerGroup!.addLayer(polygon)
     allBounds.push(polygon.getBounds())
   })
@@ -453,6 +467,19 @@ onUnmounted(() => {
   display: flex;
   justify-content: flex-end;
 }
+
+:deep(.airspace-zone-tooltip) {
+  background: rgba(15, 23, 42, 0.90) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 4px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  padding: 3px 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  pointer-events: none;
+}
+
 </style>
 
 

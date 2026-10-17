@@ -74,12 +74,20 @@
       <div v-show="currentStep === 1" class="step-content">
         <div class="map-action-bar">
           <div class="sample-btn-group">
-            <span class="label">快捷用例：</span>
+            <span class="label">交互工具：</span>
+            <el-button size="small" type="warning" plain @click="clearRoute" :disabled="routePoints.length === 0">
+              <el-icon><Delete /></el-icon> 清空航线重绘
+            </el-button>
+            <el-button size="small" type="info" plain @click="undoLastPoint" :disabled="routePoints.length === 0">
+              <el-icon><Back /></el-icon> 撤销上一个点
+            </el-button>
+            <span class="divider">|</span>
+            <span class="label">快捷测试：</span>
             <el-button size="small" type="danger" plain @click="loadForbiddenRoute">
-              <el-icon><Warning /></el-icon> 穿宝安机场禁区航线（触发拦截）
+              <el-icon><Warning /></el-icon> 穿宝安禁区(触发拦截)
             </el-button>
             <el-button size="small" type="success" plain @click="loadSafeRoute">
-              <el-icon><Check /></el-icon> 合规航线（深圳湾->福田）
+              <el-icon><Check /></el-icon> 合规航线(深圳湾->福田)
             </el-button>
           </div>
           <div class="check-btn-group">
@@ -91,9 +99,18 @@
               type="success"
               @click="applySuggestedRoute"
             >
-              <el-icon><RefreshRight /></el-icon> 一键采纳避障绕行建议
+              <el-icon><RefreshRight /></el-icon> 一键采纳避障建议
             </el-button>
           </div>
+        </div>
+
+        <div class="route-hint-bar" style="margin-bottom: 10px;">
+          <el-alert
+            type="info"
+            :closable="false"
+            show-icon
+            :title="`📍 鼠标交互绘线：直接在下方高德地图上点击添加航路点（当前已规划 ${routePoints.length} 个航路点）。至少需标绘2个起降点。`"
+          />
         </div>
 
         <el-alert
@@ -123,6 +140,9 @@
             <el-descriptions-item label="执飞机号">{{ form.uavId === 1 ? 'UAV-FY90-001' : (form.uavId === 2 ? 'UAV-FY90-002' : 'UAV-FC30-001') }}</el-descriptions-item>
             <el-descriptions-item label="执飞机长">{{ form.pilotId === 1 ? '张志强 (CAAC认证)' : '李维保' }}</el-descriptions-item>
             <el-descriptions-item label="计划巡航高度">{{ form.altPlanned }} 米</el-descriptions-item>
+            <el-descriptions-item label="计划起降时段">
+              {{ formatDateTime(timeRange[0]) }} 至 {{ formatDateTime(timeRange[1]) }}
+            </el-descriptions-item>
             <el-descriptions-item label="围栏安全检测">
               <el-tag type="success">100% 净空合规放行</el-tag>
             </el-descriptions-item>
@@ -203,6 +223,32 @@ const initWizardMap = () => {
   airspaceLayerGroup = L.layerGroup().addTo(mapInstance)
   drawAirspaceBlocks()
   redrawRoute()
+
+  // 绑定鼠标地图点击事件：支持用户自由自定义点选航线
+  mapInstance.on('click', (e: L.LeafletMouseEvent) => {
+    const lng = Number(e.latlng.lng.toFixed(6))
+    const lat = Number(e.latlng.lat.toFixed(6))
+    routePoints.value.push([lng, lat])
+    validationResult.value = null
+    redrawRoute()
+    ElMessage.info(`已添加航路点 [${lng}, ${lat}]，当前已标绘 ${routePoints.value.length} 个点`)
+  })
+}
+
+const clearRoute = () => {
+  routePoints.value = []
+  validationResult.value = null
+  redrawRoute()
+  ElMessage.warning('已清空航线，请在地图上依次点击标记起降航路点')
+}
+
+const undoLastPoint = () => {
+  if (routePoints.value.length > 0) {
+    routePoints.value.pop()
+    validationResult.value = null
+    redrawRoute()
+    ElMessage.info('已撤销上一个航路点')
+  }
 }
 
 const drawAirspaceBlocks = () => {
@@ -220,6 +266,11 @@ const drawAirspaceBlocks = () => {
       weight: 2
     })
     polygon.bindPopup(`<b>${block.blockName}</b><br/>${block.blockKindDesc} (限高: ${block.limitAlt ? block.limitAlt + 'm' : '禁飞'})`)
+    polygon.bindTooltip(block.blockKind === 1 ? `🔴 ${block.blockName} (禁飞区)` : (block.blockKind === 2 ? `🟠 ${block.blockName} (限高${block.limitAlt}m)` : `🟡 ${block.blockName}`), {
+      permanent: true,
+      direction: 'center',
+      className: 'airspace-zone-tooltip'
+    })
     airspaceLayerGroup!.addLayer(polygon)
   })
 }
@@ -292,14 +343,26 @@ const loadSafeRoute = () => {
   handleValidate()
 }
 
+const formatDateTime = (date: any) => {
+  if (!date) return ''
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
 const handleValidate = async () => {
+  if (routePoints.value.length < 2) {
+    ElMessage.warning('规划航线至少需要标记2个航路点（起飞点与降落点）')
+    return
+  }
   checking.value = true
   try {
     const res: any = await validateAirspaceRoute({
       routePoints: routePoints.value,
       altPlanned: form.value.altPlanned,
-      startAt: timeRange.value[0]?.toISOString(),
-      endAt: timeRange.value[1]?.toISOString()
+      startAt: formatDateTime(timeRange.value[0]),
+      endAt: formatDateTime(timeRange.value[1])
     })
     validationResult.value = res?.data || res
     redrawRoute()
@@ -328,13 +391,15 @@ const handleSubmitApply = async () => {
       uavId: form.value.uavId,
       pilotId: form.value.pilotId,
       altPlanned: form.value.altPlanned,
-      startAt: timeRange.value[0]?.toISOString(),
-      endAt: timeRange.value[1]?.toISOString(),
+      startAt: formatDateTime(timeRange.value[0]),
+      endAt: formatDateTime(timeRange.value[1]),
       routePoints: routePoints.value
     })
     const applySn = res?.applySn || res?.data?.applySn || 'FA已生成'
-    ElMessage.success(`飞行计划申报提交成功！单号: ${applySn}`)
-    router.push('/airspace/approval')
+    ElMessage.success(`飞行计划申报提交成功并锁定空域！单号: ${applySn}`)
+    setTimeout(() => {
+      router.push('/airspace/approval')
+    }, 1200)
   } catch (error: any) {
     ElMessage.error(error.message || '提交申报失败')
   } finally {
@@ -346,6 +411,7 @@ onMounted(async () => {
   try {
     const res: any = await getAirspaceBlocks()
     blocks.value = Array.isArray(res) ? res : (res?.data || [])
+    drawAirspaceBlocks()
   } catch (error) {}
 })
 
@@ -445,6 +511,24 @@ onUnmounted(() => {
   max-width: 850px;
   margin: 0 auto;
 }
+
+:deep(.airspace-zone-tooltip) {
+  background: rgba(15, 23, 42, 0.90) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 4px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  padding: 3px 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  pointer-events: none;
+}
+
+.divider {
+  color: #cbd5e1;
+  margin: 0 4px;
+}
+
 </style>
 
 

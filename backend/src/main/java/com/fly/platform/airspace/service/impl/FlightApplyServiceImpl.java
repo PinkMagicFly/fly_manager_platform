@@ -61,7 +61,10 @@ public class FlightApplyServiceImpl implements FlightApplyService {
 
     @Override
     public FlightApplyVO getApplyDetail(Long applyId) {
-        FlightApply apply = flightApplyMapper.selectById(applyId);
+        FlightApply apply = flightApplyMapper.selectApplyById(applyId);
+        if (apply == null) {
+            apply = flightApplyMapper.selectById(applyId);
+        }
         if (apply == null) {
             throw new BusinessException(404, "飞行申报单不存在");
         }
@@ -111,14 +114,17 @@ public class FlightApplyServiceImpl implements FlightApplyService {
         sb.append(")");
         apply.setRouteLine(sb.toString());
 
-        flightApplyMapper.insert(apply);
+        flightApplyMapper.insertApply(apply);
         return apply;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void approveApply(FlightApproveDTO dto, Long approverId) {
-        FlightApply apply = flightApplyMapper.selectById(dto.getApplyId());
+        FlightApply apply = flightApplyMapper.selectApplyById(dto.getApplyId());
+        if (apply == null) {
+            apply = flightApplyMapper.selectById(dto.getApplyId());
+        }
         if (apply == null) {
             throw new BusinessException(404, "飞行申报单不存在");
         }
@@ -134,7 +140,10 @@ public class FlightApplyServiceImpl implements FlightApplyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancelApply(Long applyId, Long operatorId) {
-        FlightApply apply = flightApplyMapper.selectById(applyId);
+        FlightApply apply = flightApplyMapper.selectApplyById(applyId);
+        if (apply == null) {
+            apply = flightApplyMapper.selectById(applyId);
+        }
         if (apply == null) {
             throw new BusinessException(404, "飞行申报单不存在");
         }
