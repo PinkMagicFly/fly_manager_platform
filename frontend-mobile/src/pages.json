@@ -46,7 +46,7 @@
         "navigationBarBackgroundColor": "#0284c7",
         "navigationBarTextStyle": "white"
       }
-    ,
+    },
     {
       "path": "pages/order/create",
       "style": {
@@ -70,7 +70,6 @@
         "navigationBarBackgroundColor": "#0284c7",
         "navigationBarTextStyle": "white"
       }
-    }
     }
   ],
   "globalStyle": {

@@ -297,7 +297,12 @@ const handleAcceptMaintain = async (maintainId: number) => {
 }
 
 const navTo = (url: string) => {
-  uni.navigateTo({ url })
+  uni.navigateTo({
+    url,
+    fail: () => {
+      uni.reLaunch({ url })
+    }
+  })
 }
 
 const handleLogout = async () => {
@@ -432,12 +437,20 @@ onShow(() => {
 }
 .action-card {
   flex: 1;
-  padding: 12px;
+  padding: 14px 12px;
   border-radius: 10px;
   color: #fff;
   display: flex;
   flex-direction: column;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: transform 0.15s ease, opacity 0.15s ease;
 }
+.action-card:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+.bg-sky { background: linear-gradient(135deg, #0284c7, #0369a1); }
 .bg-emerald { background: linear-gradient(135deg, #10b981, #059669); }
 .bg-amber { background: linear-gradient(135deg, #f59e0b, #d97706); }
 .bg-rose { background: linear-gradient(135deg, #ef4444, #dc2626); }

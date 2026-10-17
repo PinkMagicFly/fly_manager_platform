@@ -25,6 +25,7 @@
     <scroll-view scroll-y class="order-scroll" v-loading="loading">
       <view v-if="orderList.length === 0" class="empty-wrap">
         <text class="empty-txt">暂无相关运单记录</text>
+        <button class="empty-create-btn" size="mini" @click="goToCreate">➕ 立即在线寄件下单</button>
       </view>
       <view v-for="item in orderList" :key="item.orderId" class="order-card">
         <view class="card-top">
@@ -133,7 +134,14 @@ const handleDeliver = async (orderId: number) => {
   })
 }
 
-const goToCreate = () => { uni.navigateTo({ url: '/pages/order/create' }) }
+const goToCreate = () => {
+  uni.navigateTo({
+    url: '/pages/order/create',
+    fail: () => {
+      uni.reLaunch({ url: '/pages/order/create' })
+    }
+  })
+}
 const goToDetail = (orderId: number) => { uni.navigateTo({ url: `/pages/order/detail?id=${orderId}` }) }
 const goBack = () => { uni.reLaunch({ url: '/pages/work/index' }) }
 
@@ -179,6 +187,7 @@ onMounted(() => { loadOrders() })
 .btn-ghost { background: #f1f5f9; color: #475569; }
 .btn-primary { background: #0284c7; color: #fff; }
 .btn-success { background: #10b981; color: #fff; }
-.empty-wrap { padding: 40px 0; text-align: center; }
+.empty-wrap { padding: 40px 0; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .empty-txt { font-size: 13px; color: #94a3b8; }
+.empty-create-btn { background: #0284c7; color: #fff; font-size: 13px; border-radius: 16px; padding: 2px 14px; margin: 0; }
 </style>
