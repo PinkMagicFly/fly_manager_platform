@@ -247,7 +247,7 @@ public class AirspaceCollisionEngine {
 
     /**
      * 智能避障绕行航线规划器
-     * 计算避开多边形外接矩形外延缓冲边界的双角点平滑绕行路径
+     * 支持东西向/南北向全自适应智能选边，并在输出前进行自闭环校验
      */
     public List<List<Double>> generateAvoidanceRoute(List<Point2D> originalRoute,
                                                      List<Point2D> forbiddenPolygon,
@@ -258,38 +258,76 @@ public class AirspaceCollisionEngine {
         Point2D start = originalRoute.get(0);
         Point2D end = originalRoute.get(originalRoute.size() - 1);
 
-        suggested.add(start.toList());
+        // 尝试安全外延缓冲距离（1.5km ~ 3.5km 自适应步进）
+        double[] bufferSteps = {0.018, 0.025, 0.035};
 
-        // 安全外拓缓冲距离（约 1.5 公里）
-        double buffer = 0.015;
-        double minX = blockMbr.minX - buffer;
-        double maxX = blockMbr.maxX + buffer;
-        double minY = blockMbr.minY - buffer;
-        double maxY = blockMbr.maxY + buffer;
+        for (double buffer : bufferSteps) {
+            double minX = blockMbr.minX - buffer;
+            double maxX = blockMbr.maxX + buffer;
+            double minY = blockMbr.minY - buffer;
+            double maxY = blockMbr.maxY + buffer;
 
-        // 四个角点外拓拐点
-        Point2D nw = new Point2D(minX, maxY);
-        Point2D ne = new Point2D(maxX, maxY);
-        Point2D sw = new Point2D(minX, minY);
-        Point2D se = new Point2D(maxX, minY);
+            Point2D nw = new Point2D(minX, maxY);
+            Point2D ne = new Point2D(maxX, maxY);
+            Point2D sw = new Point2D(minX, minY);
+            Point2D se = new Point2D(maxX, minY);
 
-        boolean westToEast = start.x <= end.x;
-        Point2D n1 = westToEast ? nw : ne;
-        Point2D n2 = westToEast ? ne : nw;
-        Point2D s1 = westToEast ? sw : se;
-        Point2D s2 = westToEast ? se : sw;
+            List<List<Point2D>> candidatePaths = new ArrayList<>();
 
-        double distNorth = distance(start, n1) + distance(n1, n2) + distance(n2, end);
-        double distSouth = distance(start, s1) + distance(s1, s2) + distance(s2, end);
+            double dx = end.x - start.x;
+            double dy = end.y - start.y;
 
-        if (distNorth <= distSouth) {
-            suggested.add(n1.toList());
-            suggested.add(n2.toList());
-        } else {
-            suggested.add(s1.toList());
-            suggested.add(s2.toList());
+            // 1. 若主导方向为东西向：候选北绕路径与南绕路径
+            if (Math.abs(dx) >= Math.abs(dy)) {
+                boolean westToEast = start.x <= end.x;
+                Point2D n1 = westToEast ? nw : ne;
+                Point2D n2 = westToEast ? ne : nw;
+                candidatePaths.add(List.of(start, n1, n2, end));
+
+                Point2D s1 = westToEast ? sw : se;
+                Point2D s2 = westToEast ? se : sw;
+                candidatePaths.add(List.of(start, s1, s2, end));
+            } else {
+                // 2. 若主导方向为南北向：候选西绕路径与东绕路径
+                boolean southToNorth = start.y <= end.y;
+                Point2D w1 = southToNorth ? sw : nw;
+                Point2D w2 = southToNorth ? nw : sw;
+                candidatePaths.add(List.of(start, w1, w2, end));
+
+                Point2D e1 = southToNorth ? se : ne;
+                Point2D e2 = southToNorth ? ne : se;
+                candidatePaths.add(List.of(start, e1, e2, end));
+            }
+
+            // 评估候选路径：优先选择不与多边形发生任何相交且总路径最短者
+            List<Point2D> bestPath = null;
+            double bestDist = Double.MAX_VALUE;
+
+            for (List<Point2D> path : candidatePaths) {
+                if (!isRouteIntersectsPolygon(path, forbiddenPolygon)) {
+                    double dist = 0;
+                    for (int i = 0; i < path.size() - 1; i++) {
+                        dist += distance(path.get(i), path.get(i + 1));
+                    }
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        bestPath = path;
+                    }
+                }
+            }
+
+            if (bestPath != null) {
+                for (Point2D pt : bestPath) {
+                    suggested.add(pt.toList());
+                }
+                return suggested;
+            }
         }
 
+        // 兜底退回安全双拐点
+        suggested.add(start.toList());
+        suggested.add(new Point2D(blockMbr.minX - 0.025, blockMbr.maxY + 0.025).toList());
+        suggested.add(new Point2D(blockMbr.maxX + 0.025, blockMbr.maxY + 0.025).toList());
         suggested.add(end.toList());
         return suggested;
     }

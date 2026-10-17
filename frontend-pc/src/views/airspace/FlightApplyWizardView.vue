@@ -94,6 +94,13 @@
             <el-button type="primary" :loading="checking" @click="handleValidate">
               <el-icon><Aim /></el-icon> 毫秒级围栏碰撞检测
             </el-button>
+            <el-button
+              v-if="validationResult && !validationResult.pass && validationResult.suggestedRoute"
+              type="success"
+              @click="applySuggestedRoute"
+            >
+              <el-icon><RefreshRight /></el-icon> 一键采纳智能避障绕行建议
+            </el-button>
           </div>
         </div>
 
@@ -365,6 +372,18 @@ const handleValidate = async () => {
     checking.value = false
   }
 }
+
+const applySuggestedRoute = () => {
+  if (validationResult.value && validationResult.value.suggestedRoute) {
+    routePoints.value = validationResult.value.suggestedRoute
+    if (validationResult.value.suggestedAlt) {
+      form.value.altPlanned = validationResult.value.suggestedAlt
+    }
+    ElMessage.success('已自动采纳智能避障绕行航线，正在自动复检放行...')
+    handleValidate()
+  }
+}
+
 
 const handleSubmitApply = async () => {
   submitting.value = true

@@ -61,6 +61,16 @@ public class AirspaceFeatureChainTest {
         assertThat(validateFailResult.getConflictType()).isEqualTo("FORBIDDEN_ZONE");
         assertThat(validateFailResult.getConflictBlockId()).isEqualTo(1L);
 
+        // 验证生成的智能避障航线自身再次检测必须 100% 净空放行通过
+        assertThat(validateFailResult.getSuggestedRoute()).isNotEmpty();
+        AirspaceValidateDTO avoidValidateDTO = new AirspaceValidateDTO();
+        avoidValidateDTO.setRoutePoints(validateFailResult.getSuggestedRoute());
+        avoidValidateDTO.setAltPlanned(90);
+        avoidValidateDTO.setStartAt(LocalDateTime.now().plusHours(1));
+        avoidValidateDTO.setEndAt(LocalDateTime.now().plusHours(2));
+        AirspaceValidateResultVO avoidPassResult = airspaceBlockService.validateRoute(avoidValidateDTO);
+        assertThat(avoidPassResult.getPass()).as("采纳避障航线后必须 100% 校验合格放行").isTrue();
+
         FlightApplyCreateDTO forbiddenCreateDTO = new FlightApplyCreateDTO();
         forbiddenCreateDTO.setOrderId(null); // 独立申报无订单
         forbiddenCreateDTO.setMerchantId(1L);
