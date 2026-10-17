@@ -48,5 +48,12 @@ public interface FlightApplyMapper extends BaseMapper<FlightApply> {
             "ST_GeomFromText(#{routeLine}), #{altPlanned}, #{startAt}, #{endAt}, #{checkState}, #{approveState})")
     @Options(useGeneratedKeys = true, keyProperty = "applyId")
     int insertApply(FlightApply apply);
+
+    /** 仅更新审批决策与时段锁定字段（绝不触碰 route_line 空间折线，彻底杜绝数据截断报错） */
+    @Update("UPDATE flight_apply SET approve_state = #{approveState}, approver_id = #{approverId}, " +
+            "approve_note = #{approveNote}, approve_at = #{approveAt}, alt_planned = #{altPlanned} " +
+            "WHERE apply_id = #{applyId}")
+    int updateApproveState(FlightApply apply);
+
 }
 

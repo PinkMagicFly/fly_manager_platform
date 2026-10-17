@@ -174,5 +174,18 @@ INSERT INTO api_endpoint (endpoint_id, service_name, endpoint_url, method, statu
 (2, '高德地图Web API逆地理编码服务', 'https://restapi.amap.com/v3/geocode/regeo', 'GET', 200, 18, 100.00, NOW()),
 (3, '中央气象台低空微气象与阵风预警', 'https://weather.soarcloud.com/api/v2/aviation-wind', 'GET', 200, 31, 99.85, NOW()),
 (4, '中国银联 / 微信企业对账支付网关', 'https://api.mch.weixin.qq.com/v3/pay/transactions', 'POST', 200, 56, 100.00, NOW());
+-- 14. 初始化飞行计划申报与违规案件数据
+TRUNCATE TABLE flight_apply;
+INSERT INTO flight_apply (apply_id, apply_sn, order_id, merchant_id, uav_id, pilot_id, route_line, alt_planned, start_at, end_at, check_state, approve_state, approver_id, approve_note, approve_at) VALUES
+(1, 'FA202610170001', 0, 1, 1, 1, ST_GeomFromText('LINESTRING(113.943 22.540, 114.000 22.545, 114.062 22.553)'), 100, DATE_SUB(NOW(), INTERVAL 1 HOUR), DATE_ADD(NOW(), INTERVAL 1 HOUR), 1, 0, NULL, NULL, NULL);
+
+TRUNCATE TABLE violation_case;
+INSERT INTO violation_case (case_id, case_sn, apply_id, violate_kind, level, punish_state, evidence, handled_by, handled_at) VALUES 
+(1, 'VC202610170001', 1, 1, 1, 2, '雷达实测轨迹偏离规划中轴线达128米，持续42秒，责令留痕警告', 3, NOW()),
+(2, 'VC202610170002', 1, 2, 3, 0, '非法闯入宝安机场外围净空保护缓冲区深达160米，雷达已记录存证', NULL, NULL),
+(3, 'VC202610170003', 1, 3, 2, 0, '南山科技园管制区巡航高度达165米（超出法定限高120米达45米）', NULL, NULL),
+(4, 'VC202610170004', 1, 4, 1, 1, '大运中心降落超时占用起降航道35分钟，造成后续机组盘旋等待', NULL, NULL);
+
+
 
 SET FOREIGN_KEY_CHECKS = 1;

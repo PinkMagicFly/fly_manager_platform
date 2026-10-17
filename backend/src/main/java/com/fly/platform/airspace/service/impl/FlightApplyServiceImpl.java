@@ -91,8 +91,16 @@ public class FlightApplyServiceImpl implements FlightApplyService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public FlightApply createApply(FlightApplyCreateDTO dto, Long currentMerchantId) {
-        Long merchantId = dto.getMerchantId() != null ? dto.getMerchantId() : currentMerchantId;
+    public FlightApply createApply(FlightApplyCreateDTO dto, Long currentAccountId) {
+        Long merchantId = dto.getMerchantId();
+        if (merchantId == null && currentAccountId != null) {
+            MerchantArchive ma = merchantArchiveMapper.selectOne(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MerchantArchive>()
+                            .eq(MerchantArchive::getAccountId, currentAccountId));
+            if (ma != null) {
+                merchantId = ma.getMerchantId();
+            }
+        }
         if (merchantId == null) {
             merchantId = 1L;
         }
@@ -152,7 +160,7 @@ public class FlightApplyServiceImpl implements FlightApplyService {
                 : FlightApplyStateEnum.REJECTED;
 
         stateMachine.transition(apply, targetState, approverId, dto.getApproveNote(), dto.getSuggestedAlt());
-        flightApplyMapper.updateById(apply);
+        flightApplyMapper.updateApproveState(apply);
     }
 
     @Override
@@ -166,7 +174,7 @@ public class FlightApplyServiceImpl implements FlightApplyService {
             throw new BusinessException(404, "飞行申报单不存在");
         }
         stateMachine.cancel(apply, operatorId);
-        flightApplyMapper.updateById(apply);
+        flightApplyMapper.updateApproveState(apply);
     }
 
     private FlightApplyVO convertToVO(FlightApply apply) {
