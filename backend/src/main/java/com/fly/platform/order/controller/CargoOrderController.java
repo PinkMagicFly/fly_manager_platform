@@ -4,6 +4,8 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.fly.platform.common.api.PageResult;
 import com.fly.platform.common.api.Result;
 import com.fly.platform.common.audit.Audit;
+import com.fly.platform.common.exception.BusinessException;
+
 import com.fly.platform.order.dto.FeeCalculateDTO;
 import com.fly.platform.order.dto.OrderCreateDTO;
 import com.fly.platform.order.dto.OrderDispatchDTO;
@@ -67,6 +69,18 @@ public class CargoOrderController {
         int count = cargoOrderService.batchAcceptOrders(ids, getOperatorId());
         return Result.ok("成功接单 " + count + " 笔运单", count);
     }
+
+    /** 商户拒单 (20 -> 70，原因必填) */
+    @PostMapping("/{id}/reject")
+    @Audit(module = "订单运营", action = "商户拒单")
+    public Result<CargoOrder> rejectOrder(@PathVariable("id") Long id,
+                                          @RequestParam(value = "reason") String reason) {
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new BusinessException(400, "拒单原因不能为空");
+        }
+        return Result.ok("已成功拒绝承运该运单", cargoOrderService.cancelOrder(id, getOperatorId(), "商户拒绝接单: " + reason.trim()));
+    }
+
 
     /** 获取智能调度推荐候选及飞手 */
     @GetMapping("/{id}/recommend-dispatch")

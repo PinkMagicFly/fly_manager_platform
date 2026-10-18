@@ -18,6 +18,12 @@
           <text class="p-val">¥{{ Number(detail?.feeTotal || 0).toFixed(2) }}</text>
         </view>
       </view>
+      <!-- 取消/拒单提示 -->
+      <view v-if="detail?.cancelReason" class="cancel-banner">
+        <text class="banner-lbl">运单说明: </text>
+        <text class="banner-txt">{{ detail.cancelReason }}</text>
+      </view>
+
 
       <!-- 寄收航道与折线可视化 -->
       <view class="card-box">
@@ -56,6 +62,11 @@
         <view class="info-row" v-if="detail?.flightApplyDetail">
           <text class="lbl">飞行申报:</text>
           <text class="val text-primary">{{ detail.flightApplyDetail.applySn }} ({{ detail.flightApplyDetail.approveStateDesc }})</text>
+        <view class="info-row" v-if="detail?.flightApplyDetail?.approveState === 2">
+          <text class="lbl" style="color: #ef4444">驳回理由:</text>
+          <text class="val" style="color: #ef4444; font-weight: bold">{{ detail.flightApplyDetail.approveNote || '未填写具体原因' }}</text>
+        </view>
+
         </view>
         <view class="info-row" v-if="detail?.settleBill">
           <text class="lbl">财务对账单:</text>
@@ -150,6 +161,10 @@ onLoad((options: any) => {
 .detail-scroll { flex: 1; padding: 12px; overflow-y: auto; }
 .map-wrap { width: 100%; height: 180px; border-radius: 6px; overflow: hidden; background: #e2e8f0; }
 .detail-map { width: 100%; height: 100%; }
+.cancel-banner { background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 12px; }
+.banner-lbl { font-weight: bold; color: #dc2626; }
+.banner-txt { color: #dc2626; margin-left: 4px; }
+
 
 .status-banner { display: flex; justify-content: space-between; align-items: center; background: #0284c7; color: #fff; padding: 14px; border-radius: 8px; margin-bottom: 10px; }
 .status-txt { font-size: 18px; font-weight: 800; display: block; }

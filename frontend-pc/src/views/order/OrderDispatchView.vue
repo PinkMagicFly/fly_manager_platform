@@ -78,6 +78,12 @@
         <div class="panel-head"><span>智能调度方案与任务申报</span></div>
         <div v-if="!selectedOrder" class="empty-box"><el-empty description="请选择待调度运单" :image-size="80" /></div>
         <div v-else class="recommend-content">
+          <!-- 空管驳回警告提示 (问题5核心透出) -->
+          <div v-if="selectedOrder.applyApproveState === 2" class="rejected-banner">
+            <div class="banner-title"><el-icon><WarningFilled /></el-icon> 上次飞行申报已被空管驳回</div>
+            <div class="banner-reason">{{ selectedOrder.approveNote || '空管审批未通过，请根据管制要求微调折线或时段后重新提交申报。' }}</div>
+          </div>
+
           <!-- 运单基础信息卡 -->
           <div class="summary-card">
             <div class="summary-row">
@@ -687,6 +693,10 @@ onMounted(() => {
 .uav-name { font-weight: 700; font-size: 13px; color: #1e293b; margin-bottom: 4px; }
 .uav-metrics { font-size: 11px; color: #475569; display: flex; gap: 10px; margin-bottom: 6px; }
 .rec-reason { font-size: 11px; color: #d97706; line-height: 1.3; }
+.rejected-banner { background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 10px; }
+.banner-title { font-size: 13px; font-weight: 700; color: #b91c1c; display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+.banner-reason { font-size: 12px; color: #dc2626; line-height: 1.4; }
+
 .empty-box { padding: 40px 0; display: flex; justify-content: center; }
 </style>
 

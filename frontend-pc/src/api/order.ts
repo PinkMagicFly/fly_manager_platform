@@ -77,6 +77,16 @@ export function deliverOrder(id: number | string): Promise<any> {
 }
 
 /** 取消运单 */
+
+/** 商户拒单 (20 -> 70，原因必填) */
+export function rejectOrder(id: number | string, reason: string): Promise<any> {
+  return request({
+    url: `/api/v1/order/${id}/reject`,
+    method: 'post',
+    params: { reason }
+  })
+}
+
 export function cancelOrder(id: number | string, reason?: string): Promise<any> {
   return request({
     url: `/api/v1/order/${id}/cancel${reason ? `?reason=${encodeURIComponent(reason)}` : ''}`,

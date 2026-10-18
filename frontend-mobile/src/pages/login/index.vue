@@ -11,6 +11,7 @@
       <text class="quick-label">快捷切换：</text>
       <button class="mini-btn" @click="fill('customer_demo')">客户</button>
       <button class="mini-btn" @click="fill('pilot_sf')">机长</button>
+      <button class="mini-btn" @click="fill('maintain_li')">运维</button>
     </view>
 
 

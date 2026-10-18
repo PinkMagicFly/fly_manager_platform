@@ -63,6 +63,10 @@
             </el-button>
             <el-button v-if="isAdmin" type="info" plain @click="$router.push('/admin/audit-logs')">
               <el-icon><Document /></el-icon> 全局审计日志
+            <el-button v-if="isAdmin" type="danger" plain :loading="resettingData" @click="handleResetDatabase">
+              <el-icon><RefreshRight /></el-icon> 一键重置种子数据
+            </el-button>
+
             </el-button>
             <el-button v-if="isMerchant" type="primary" plain @click="$router.push('/merchant/sub-accounts')">
               <el-icon><User /></el-icon> 企业子账号设置
@@ -106,11 +110,40 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { UserFilled, Stamp, CreditCard, Document, User } from '@element-plus/icons-vue'
+import { UserFilled, Stamp, CreditCard, Document, User, RefreshRight } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
 
 const router = useRouter()
 const userStore = useUserStore()
+const resettingData = ref(false)
+
+const handleResetDatabase = () => {
+  ElMessageBox.confirm(
+    '警告：一键重置将恢复全平台系统基准种子数据，所有测试产生的脏数据将被清除，预置账号（admin, merchant_sf, dispatcher_sf, atc_officer, pilot_sf, maintain_li, customer_demo 密码统一 123456）将全部恢复就绪。确认继续执行重置吗？',
+    '系统数据重置高危确认',
+    {
+      confirmButtonText: '确认重置初始化',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(async () => {
+    resettingData.value = true
+    try {
+      const res: any = await request.post('/api/v1/admin/database/reset-init-data')
+      ElMessageBox.alert(res || '平台初始化种子数据已成功重置！', '重置成功', {
+        type: 'success',
+        confirmButtonText: '知道了'
+      })
+      fetchDashboardData()
+    } catch (err: any) {
+      ElMessage.error(err.message || '重置失败')
+    } finally {
+      resettingData.value = false
+    }
+  })
+}
+
 
 const isAdmin = computed(() => userStore.userInfo?.roles.includes('ROLE_ADMIN'))
 const isMerchant = computed(() => userStore.userInfo?.roles.includes('ROLE_MERCHANT') || userStore.userInfo?.accountKind === 2)

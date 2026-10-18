@@ -136,6 +136,14 @@ public class CargoOrderServiceImpl implements CargoOrderService {
         CargoOrder order = cargoOrderMapper.selectOrderById(orderId);
         if (order == null) throw new BusinessException(404, "订单不存在");
 
+        // 要求2：接单前置守卫校验（运单起止地址必须落入起降场站服务覆盖范围内，否则禁止接单并引导拒单）
+        try {
+            siteSnapService.snapSite(order.getSenderLng(), order.getSenderLat());
+            siteSnapService.snapSite(order.getReceiverLng(), order.getReceiverLat());
+        } catch (BusinessException e) {
+            throw new BusinessException(400, "接单失败：该运单起止地址超出任何起降场站服务覆盖范围，无法承运，请执行拒单");
+        }
+
         stateMachine.transition(order, OrderStateEnum.PENDING_DISPATCH.getCode(), operatorId, "商户接单进入待调度池", orderStateFlowMapper);
         cargoOrderMapper.updateOrderState(orderId, order.getOrderState(), null);
         return order;
@@ -507,12 +515,27 @@ public class CargoOrderServiceImpl implements CargoOrderService {
                 vo.setUavModel(uav.getModel());
             }
         }
+        // 预检起止坐标是否落入服务场站覆盖范围（≤5000米）
+        try {
+            if (order.getSenderLng() != null && order.getSenderLat() != null
+                    && order.getReceiverLng() != null && order.getReceiverLat() != null) {
+                siteSnapService.snapSite(order.getSenderLng(), order.getSenderLat());
+                siteSnapService.snapSite(order.getReceiverLng(), order.getReceiverLat());
+                vo.setOutOfServiceRange(false);
+            } else {
+                vo.setOutOfServiceRange(true);
+            }
+        } catch (Exception e) {
+            vo.setOutOfServiceRange(true);
+        }
+
         if (order.getApplyId() != null) {
             FlightApply apply = flightApplyMapper.selectApplyById(order.getApplyId());
             if (apply != null) {
                 vo.setApplySn(apply.getApplySn());
                 vo.setApplyApproveState(apply.getApproveState());
                 vo.setRoutePoints(apply.parseRoutePoints());
+                vo.setApproveNote(apply.getApproveNote());
                 if (apply.getPilotId() != null) {
                     CrewStaff pilot = crewStaffMapper.selectById(apply.getPilotId());
                     if (pilot != null) {
@@ -520,6 +543,15 @@ public class CargoOrderServiceImpl implements CargoOrderService {
                         vo.setPilotName(pilot.getRealName());
                     }
                 }
+            }
+        }
+
+        // 若订单已取消(70)或异常中断(80)，尝试从最新流水提取取消/拒单/中断原因
+        if (OrderStateEnum.CANCELLED.getCode().equals(order.getOrderState())
+                || OrderStateEnum.ABORTED.getCode().equals(order.getOrderState())) {
+            List<OrderStateFlow> flows = orderStateFlowMapper.selectByOrderId(order.getOrderId());
+            if (flows != null && !flows.isEmpty()) {
+                vo.setCancelReason(flows.get(flows.size() - 1).getRemark());
             }
         }
         return vo;

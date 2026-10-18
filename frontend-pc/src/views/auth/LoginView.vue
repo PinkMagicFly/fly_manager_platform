@@ -1,5 +1,11 @@
 <template>
   <div class="login-container">
+    <!-- 顶部直接切换移动端横幅 (无需登录即可直达移动作业端) -->
+    <div class="mobile-switch-banner" @click="goToMobile">
+      <el-icon><Cellphone /></el-icon>
+      <span>📱 切换至移动作业端 (UniApp H5 · 客户寄件/机长执飞/外场运维) ›</span>
+    </div>
+
     <div class="login-card">
       <div class="login-header">
         <div class="logo-icon-wrap"><el-icon class="brand-icon"><Position /></el-icon></div>
@@ -41,6 +47,8 @@
 
       <div class="login-footer">
         <router-link to="/merchant/apply" class="apply-link"><el-icon><Promotion /></el-icon> 物流企业入驻向导</router-link>
+        <span class="footer-divider">|</span>
+        <a href="/mobile/" class="apply-link mobile-link"><el-icon><Cellphone /></el-icon> 移动作业端入口</a>
       </div>
     </div>
   </div>
@@ -50,7 +58,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { User, Lock, Key, Position, Promotion } from '@element-plus/icons-vue'
+import { User, Lock, Key, Position, Promotion, Cellphone } from '@element-plus/icons-vue'
 import { ElMessage, type FormInstance } from 'element-plus'
 import request from '@/utils/request'
 
@@ -68,11 +76,16 @@ const rules = {
   smsCode: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
 }
 
+const goToMobile = () => {
+  window.location.href = '/mobile/'
+}
+
 const fillQuick = (user: string) => {
   loginForm.username = user
   loginForm.password = '123456'
   loginForm.smsCode = '123456'
 }
+
 
 const handleSendCode = async () => {
   if (!loginForm.username) return ElMessage.warning('请先输入手机号')
@@ -114,11 +127,33 @@ const handleLogin = async () => {
   height: 100vh;
   width: 100vw;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 16px;
   background: radial-gradient(circle at 50% 50%, #1e293b 0%, #0b1120 100%);
 }
+.mobile-switch-banner {
+  background: linear-gradient(90deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  padding: 10px 24px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+.mobile-switch-banner:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.5);
+  background: linear-gradient(90deg, #0369a1 0%, #0284c7 100%);
+}
 .login-card {
+
   width: 430px;
   background: #ffffff;
   border-radius: 12px;
@@ -170,9 +205,16 @@ const handleLogin = async () => {
 }
 .login-footer {
   margin-top: 20px;
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
   border-top: 1px solid #f1f5f9;
   padding-top: 14px;
+}
+.footer-divider {
+  color: #cbd5e1;
+  font-size: 12px;
 }
 .apply-link {
   font-size: 13px;
@@ -182,4 +224,9 @@ const handleLogin = async () => {
   align-items: center;
   gap: 4px;
 }
+.mobile-link {
+  color: #0284c7;
+  font-weight: 600;
+}
+
 </style>

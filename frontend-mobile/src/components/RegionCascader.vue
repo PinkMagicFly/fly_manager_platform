@@ -142,7 +142,8 @@ const confirmSelect = () => {
 
 <style scoped>
 .region-cascader-wrap { width: 100%; }
-.picker-trigger { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+.picker-trigger { display: flex; justify-content: space-between; align-items: center; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 10px; height: 38px; line-height: 38px; font-size: 13px; box-sizing: border-box; }
+
 .val-text { color: #0f172a; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .placeholder-text { color: #94a3b8; }
 .arrow { color: #cbd5e1; font-size: 14px; margin-left: 4px; }

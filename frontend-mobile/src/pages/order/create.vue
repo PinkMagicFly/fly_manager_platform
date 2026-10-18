@@ -8,7 +8,8 @@
 
     <view class="form-scroll">
       <view class="card-box">
-        <view class="card-title">起止服务地址 (美团结构化地址)</view>
+        <view class="card-title">起止服务网格与详细地址</view>
+
         
         <!-- 寄件端结构化输入 -->
         <view class="addr-block">
@@ -280,12 +281,13 @@ onMounted(() => {
 .form-scroll { flex: 1; padding: 12px; overflow-y: auto; }
 .card-box { background: #fff; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
 .card-title { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 10px; }
-.addr-block { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; }
+.addr-block { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; }
 .addr-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
 .addr-label { font-size: 13px; font-weight: 700; color: #0f172a; }
 .region-selector-row { margin-bottom: 8px; }
-.detail-input { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; font-size: 13px; color: #0f172a; }
+.detail-input { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 10px; height: 38px; line-height: 38px; font-size: 13px; color: #0f172a; width: 100%; box-sizing: border-box; }
 .geo-coord-tag { margin-top: 6px; font-size: 11px; color: #64748b; font-family: monospace; }
+
 
 .addr-row { display: flex; align-items: center; gap: 8px; }
 .badge { font-size: 11px; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; }

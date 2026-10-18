@@ -123,6 +123,15 @@ public class CargoOrderVO {
     /** 申报飞行航线坐标点序列 [[lng, lat], ...] */
     private List<List<Double>> routePoints;
 
+    /** 关联飞行计划审批/驳回意见备注 */
+    private String approveNote;
+
+    /** 取消/拒单/异常中断原因说明 */
+    private String cancelReason;
+
+    /** 是否超出起降场站服务覆盖半径（true 时无法接单） */
+    private Boolean outOfServiceRange;
+
     /** 期望最晚送达时间 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime expectArriveAt;

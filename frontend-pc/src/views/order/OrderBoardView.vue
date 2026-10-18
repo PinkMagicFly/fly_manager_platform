@@ -54,11 +54,14 @@
             <div class="sub-cell">重量: <strong>{{ row.goodsWeight }}</strong> kg</div>
           </template>
         </el-table-column>
-        <el-table-column label="寄收航道" min-width="220">
+        <el-table-column label="寄收航道" min-width="240">
           <template #default="{ row }">
             <div class="route-box">
               <div class="text-green">起: {{ row.senderAddr }}</div>
               <div class="text-orange">止: {{ row.receiverAddr }}</div>
+              <el-tag v-if="row.outOfServiceRange && row.orderState <= 20" size="small" type="danger" effect="dark" style="margin-top: 3px">
+                超出场站服务范围 (无法接单)
+              </el-tag>
             </div>
           </template>
         </el-table-column>
@@ -68,9 +71,20 @@
             <el-tag size="small" :type="row.payState === 1 ? 'success' : 'info'">{{ row.payStateDesc }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="orderState" label="订单状态" min-width="110">
+        <el-table-column prop="orderState" label="订单状态/审批意见" min-width="150">
           <template #default="{ row }">
-            <el-tag :type="getStateTagType(row.orderState)" effect="light">{{ row.orderStateDesc }}</el-tag>
+            <div>
+              <el-tag :type="getStateTagType(row.orderState)" effect="light">{{ row.orderStateDesc }}</el-tag>
+              <el-tag v-if="row.applyApproveState === 2" size="small" type="danger" effect="plain" style="margin-left: 4px">空管驳回</el-tag>
+            </div>
+            <!-- 空管驳回原因展示 (问题5核心透出) -->
+            <div v-if="row.applyApproveState === 2 && row.approveNote" class="reject-reason-tip">
+              驳回理由: {{ row.approveNote }}
+            </div>
+            <!-- 取消/拒单说明展示 -->
+            <div v-if="row.orderState === 70 && row.cancelReason" class="cancel-reason-tip">
+              说明: {{ row.cancelReason }}
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="执飞分配" min-width="130">
@@ -81,15 +95,25 @@
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="下单时间" min-width="160" />
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="goToDetail(row.orderId)">全景</el-button>
             <el-button v-if="row.orderState === 10" link type="success" size="small" @click="handlePay(row)">模拟支付</el-button>
-            <el-button v-if="row.orderState === 20" link type="warning" size="small" @click="handleAccept(row)">确认接单</el-button>
-            <el-button v-if="row.orderState === 30" link type="primary" size="small" @click="goToDispatchWithOrder(row.orderId)">指派调度</el-button>
+            
+            <!-- 待接单状态：超范围禁用接单，并提供拒单入口 (要求2) -->
+            <template v-if="row.orderState === 20">
+              <el-button v-if="row.outOfServiceRange" link type="info" size="small" disabled title="该运单起止地址超出场站服务范围，不可接单">超范围禁接</el-button>
+              <el-button v-else link type="warning" size="small" @click="handleAccept(row)">确认接单</el-button>
+              <el-button link type="danger" size="small" @click="handleReject(row)">拒单</el-button>
+            </template>
+
+            <!-- 待调度状态：若被驳回提示调整重报 -->
+            <el-button v-if="row.orderState === 30" link :type="row.applyApproveState === 2 ? 'danger' : 'primary'" size="small" @click="goToDispatchWithOrder(row.orderId)">
+              {{ row.applyApproveState === 2 ? '调整航线重报' : '指派调度' }}
+            </el-button>
             <el-button v-if="row.orderState === 40" link type="success" size="small" @click="handleTakeoff(row)">确认起飞</el-button>
             <el-button v-if="row.orderState === 50" link type="success" size="small" @click="handleDeliver(row)">送达签收</el-button>
-            <el-button v-if="row.orderState < 60" link type="danger" size="small" @click="handleCancel(row)">取消</el-button>
+            <el-button v-if="row.orderState < 60 && row.orderState !== 20" link type="danger" size="small" @click="handleCancel(row)">取消</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -121,8 +145,10 @@ import {
   batchAcceptOrders,
   takeoffOrder,
   deliverOrder,
-  cancelOrder
+  cancelOrder,
+  rejectOrder
 } from '@/api/order'
+
 
 const router = useRouter()
 const loading = ref(false)
@@ -198,8 +224,9 @@ const handleTabChange = (name: any) => {
   loadData()
 }
 
-const canSelect = (row: any) => row.orderState === 20
+const canSelect = (row: any) => row.orderState === 20 && !row.outOfServiceRange
 const handleSelectionChange = (selection: any[]) => { selectedRows.value = selection }
+
 
 const getStateTagType = (state: number) => {
   switch (state) {
@@ -234,6 +261,19 @@ const handleAccept = async (row: any) => {
     loadData(); loadStats()
   } catch (err: any) { ElMessage.error(err.message || '接单失败') }
 }
+
+const handleReject = (row: any) => {
+  ElMessageBox.prompt('请输入拒绝接单的原因说明（如: 寄收地址超出场站服务覆盖范围等）:', '商户拒单', {
+    confirmButtonText: '确认拒单', cancelButtonText: '放弃', inputPattern: /\S+/, inputErrorMessage: '拒单原因不能为空'
+  }).then(async ({ value }) => {
+    try {
+      await rejectOrder(row.orderId, value)
+      ElMessage.success('已拒绝承接该运单')
+      loadData(); loadStats()
+    } catch (err: any) { ElMessage.error(err.message || '拒单失败') }
+  })
+}
+
 
 const handleBatchAccept = async () => {
   if (selectedRows.value.length === 0) return
@@ -311,5 +351,8 @@ onMounted(() => { loadStats(); loadData() })
 .route-box { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
 .sub-cell { font-size: 11px; color: #64748b; }
 .price-val { font-weight: 700; color: #0f172a; }
+.reject-reason-tip { font-size: 11px; color: #ef4444; margin-top: 3px; line-height: 1.3; font-weight: 500; }
+.cancel-reason-tip { font-size: 11px; color: #64748b; margin-top: 3px; line-height: 1.3; }
+
 .pagination-wrap { margin-top: 16px; display: flex; justify-content: flex-end; }
 </style>

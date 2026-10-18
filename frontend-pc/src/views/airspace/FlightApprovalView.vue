@@ -49,11 +49,14 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="审批状态" width="100" align="center">
+        <el-table-column label="审批状态" width="130" align="center">
           <template #default="{ row }">
             <el-tag size="small" :type="getStatusTag(row.approveState)">
               {{ row.approveStateDesc }}
             </el-tag>
+            <div v-if="row.approveState === 2 && row.approveNote" style="font-size: 11px; color: #ef4444; margin-top: 2px; line-height: 1.2">
+              理由: {{ row.approveNote }}
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="220" align="center" fixed="right">
@@ -80,6 +83,15 @@
     <!-- 空间推演与航线冲突核查弹窗 -->
     <el-dialog v-model="simDialogVisible" :title="'飞行计划时空推演核查 - ' + currentApply?.applySn" width="800px" @opened="initSimMap">
       <div v-if="currentApply" class="sim-container">
+        <el-alert
+          v-if="currentApply?.approveState === 2"
+          type="error"
+          :closable="false"
+          show-icon
+          :title="'该任务已被空管驳回：' + (currentApply.approveNote || '未填写具体原因')"
+          style="margin-bottom: 12px"
+        />
+
         <el-alert
           type="info"
           :closable="false"

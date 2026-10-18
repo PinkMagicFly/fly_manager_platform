@@ -14,6 +14,15 @@
       <el-col :span="12">
         <el-card shadow="never" class="info-card">
           <template #header><div class="card-header"><span>1. 基础物流与货物</span></div></template>
+          <el-alert
+            v-if="detail?.cancelReason"
+            type="warning"
+            :closable="false"
+            show-icon
+            :title="'运单取消/拒单说明：' + detail?.cancelReason"
+            style="margin-bottom: 10px"
+          />
+
           <el-descriptions :column="2" border size="small">
             <el-descriptions-item label="流水号">{{ detail?.orderSn }}</el-descriptions-item>
             <el-descriptions-item label="客户">{{ detail?.customerName || '个人客户' }}</el-descriptions-item>
@@ -65,6 +74,15 @@
         <el-card shadow="never" class="info-card">
           <template #header><div class="card-header"><span>3. 飞行计划申报与审批</span></div></template>
           <div v-if="detail?.flightApplyDetail">
+            <el-alert
+              v-if="detail?.flightApplyDetail?.approveState === 2"
+              type="error"
+              :closable="false"
+              show-icon
+              :title="'空管审批驳回原因：' + (detail?.flightApplyDetail?.approveNote || '未填写具体原因')"
+              style="margin-bottom: 8px"
+            />
+
             <el-descriptions :column="2" border size="small">
               <el-descriptions-item label="申报号"><strong>{{ detail?.flightApplyDetail?.applySn }}</strong></el-descriptions-item>
               <el-descriptions-item label="审批">
