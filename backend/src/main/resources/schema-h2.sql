@@ -359,4 +359,41 @@ CREATE TABLE fly_trace (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 21. 实时告警事件记录表 (alarm_event)
+DROP TABLE IF EXISTS alarm_event;
+CREATE TABLE alarm_event (
+  alarm_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  alarm_sn VARCHAR(24) NOT NULL UNIQUE,
+  apply_id BIGINT,
+  uav_id BIGINT,
+  alarm_level TINYINT NOT NULL,
+  alarm_type VARCHAR(64) NOT NULL,
+  content VARCHAR(255) NOT NULL,
+  handle_state TINYINT NOT NULL DEFAULT 0,
+  handle_note VARCHAR(1000),
+  handled_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  is_deleted TINYINT NOT NULL DEFAULT 0
+);
+
+-- 22. 客户服务与异常工单表 (service_ticket)
+DROP TABLE IF EXISTS service_ticket;
+CREATE TABLE service_ticket (
+  ticket_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  ticket_sn VARCHAR(24) NOT NULL UNIQUE,
+  account_id BIGINT NOT NULL,
+  order_id BIGINT,
+  ticket_type TINYINT NOT NULL,
+  title VARCHAR(128) NOT NULL,
+  content CLOB NOT NULL,
+  ticket_state TINYINT NOT NULL DEFAULT 0,
+  reply_content CLOB,
+  handled_by BIGINT,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  is_deleted TINYINT NOT NULL DEFAULT 0
+);
+
+
 

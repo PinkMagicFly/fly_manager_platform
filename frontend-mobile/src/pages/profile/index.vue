@@ -13,6 +13,11 @@
         <text class="lbl" style="color: #0284c7; font-weight: bold;">👉 进入外场机长作业工作台</text>
         <text class="val text-primary">点击进入 ›</text>
       </view>
+      <view class="list-item" @click="navToTicket" style="cursor: pointer;">
+        <text class="lbl" style="color: #0284c7; font-weight: bold;">🎧 客户客服与诉求工单</text>
+        <text class="val text-primary">发起咨询/投诉 ›</text>
+      </view>
+
       <view class="list-item">
         <text class="lbl">绑定手机</text>
         <text class="val">{{ user?.mobile || '138****0000' }}</text>
@@ -68,6 +73,13 @@ const navToWork = () => {
   uni.navigateTo({
     url: '/pages/work/index'
   })
+const navToTicket = () => {
+  uni.navigateTo({
+    url: '/pages/ticket/mine'
+  })
+}
+
+
 }
 
 const handleLogout = async () => {

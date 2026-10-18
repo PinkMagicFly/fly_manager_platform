@@ -63,7 +63,7 @@
           <button class="fly-act-btn btn-success" size="mini" @click="handleFlyingDeliver">
             ✓ 确认送达签收
           </button>
-          <button class="fly-act-btn btn-danger" size="mini" @click="navTo('/pages/maintain/report')">
+          <button class="fly-act-btn btn-danger" size="mini" @click="navTo('/pages/maintain/report?orderId=' + activeFlyingOrder.orderId + '&uavId=' + (activeFlyingOrder.uavId || ''))">
             ⚠️ 故障上报
           </button>
           <button class="fly-act-btn btn-ghost" size="mini" @click="navTo('/pages/order/detail?id=' + activeFlyingOrder.orderId)">

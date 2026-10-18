@@ -65,9 +65,13 @@ INSERT INTO crew_staff (crew_id, account_id, crew_type, real_name, license_no, l
 
 -- 系统参数 (sys_param)
 INSERT INTO sys_param (param_id, param_group, param_key, param_value, param_desc) VALUES
-(1, 'fee_rule', 'BASE_FREIGHT_PRICE', '35.00', '低空货运首重起步运费（元/首重3kg）'),
-(2, 'fee_rule', 'PER_KM_SURCHARGE', '4.50', '每千米航程附加费（元/km）'),
-(3, 'fee_rule', 'AIRSPACE_PASS_PRICE', '12.00', '每单法定低空空域通道使用费（元）');
+(1, 'fee', 'fee.base_start', '25.00', '低空货运首重起步运费（元）'),
+(2, 'fee', 'fee.per_km', '3.00', '超里程每公里单价（元/km）'),
+(3, 'fee', 'fee.urgent_ratio', '1.30', '加急配送费率系数'),
+(4, 'order', 'order.timeout_pay_minutes', '30', '订单待支付超时取消时间（分钟）'),
+(5, 'order', 'order.timeout_accept_minutes', '60', '商户待接单超时取消时间（分钟）'),
+(6, 'alarm', 'alarm.timeout_minutes', '120', '告警超时未处置预警时间（分钟）'),
+(7, 'alarm', 'alarm.route_deviation_meters', '50', '在途偏航告警阈值（米）');
 
 -- 空域管控区块网格 (airspace_block)
 INSERT INTO airspace_block (block_id, block_name, block_kind, geo_polygon, limit_alt, effective_at, expire_at, source) VALUES

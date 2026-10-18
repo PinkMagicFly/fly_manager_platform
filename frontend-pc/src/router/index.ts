@@ -50,6 +50,25 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '敏感操作审计日志' }
       },
       {
+        path: 'admin/alarm',
+        name: 'AlarmCenter',
+        component: () => import('@/views/admin/AlarmCenterView.vue'),
+        meta: { title: '实时告警处置台' }
+      },
+      {
+        path: 'admin/tickets',
+        name: 'TicketCenter',
+        component: () => import('@/views/admin/TicketCenterView.vue'),
+        meta: { title: '客户工单协同台' }
+      },
+      {
+        path: 'admin/params',
+        name: 'SysParam',
+        component: () => import('@/views/admin/SysParamView.vue'),
+        meta: { title: '系统参数配置中枢' }
+      },
+
+      {
         path: 'asset/uav',
         name: 'UavFleet',
         component: () => import('@/views/asset/UavFleetView.vue'),

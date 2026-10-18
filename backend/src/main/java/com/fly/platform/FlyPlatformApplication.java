@@ -3,6 +3,7 @@ package com.fly.platform;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 翔云·低空智慧物流运营平台 统一后端主启动类
@@ -11,6 +12,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @author SoarCloud Team
  * @version 1.0.0
  */
+@EnableScheduling
 @SpringBootApplication
 @MapperScan("com.fly.platform.**.mapper")
 public class FlyPlatformApplication {

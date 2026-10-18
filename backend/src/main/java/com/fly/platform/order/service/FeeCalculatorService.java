@@ -3,6 +3,8 @@ package com.fly.platform.order.service;
 import com.fly.platform.common.exception.BusinessException;
 import com.fly.platform.order.dto.FeeCalculateDTO;
 import com.fly.platform.order.vo.FeeCalculateVO;
+import com.fly.platform.sysparam.service.SysParamService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -10,7 +12,7 @@ import java.math.RoundingMode;
 
 /**
  * 运费前置试算服务
- * 实现阶梯里程、超重加价、空域通道费与加急系数（1.3倍）精确计算
+ * 实现阶梯里程、超重加价、空域通道费与加急系数（动态系统参数可配，毫秒热生效）精确计算
  *
  * @author SoarCloud Team
  */
@@ -19,6 +21,17 @@ public class FeeCalculatorService {
 
     /** 地球平均半径（公里） */
     private static final double EARTH_RADIUS_KM = 6371.0;
+
+    private final SysParamService sysParamService;
+
+    public FeeCalculatorService() {
+        this.sysParamService = null;
+    }
+
+    @Autowired
+    public FeeCalculatorService(@Autowired(required = false) SysParamService sysParamService) {
+        this.sysParamService = sysParamService;
+    }
 
     /**
      * 阶梯运费精确试算
@@ -38,17 +51,28 @@ public class FeeCalculatorService {
             throw new BusinessException(400, "寄收件经纬度坐标不能为空");
         }
 
+        // 动态读取系统参数（若未配置或异常则回退基线默认值）
+        BigDecimal paramBaseStart = sysParamService != null
+                ? sysParamService.getDecimal("fee.base_start", new BigDecimal("25.00"))
+                : new BigDecimal("25.00");
+        BigDecimal paramPerKm = sysParamService != null
+                ? sysParamService.getDecimal("fee.per_km", new BigDecimal("3.00"))
+                : new BigDecimal("3.00");
+        BigDecimal paramUrgentRatio = sysParamService != null
+                ? sysParamService.getDecimal("fee.urgent_ratio", new BigDecimal("1.30"))
+                : new BigDecimal("1.30");
+
         // 1. 计算两点间大地球面直线航程（公里）
         double dist = calculateDistanceKm(dto.getSenderLng(), dto.getSenderLat(),
                 dto.getReceiverLng(), dto.getReceiverLat());
         BigDecimal distanceKm = BigDecimal.valueOf(dist).setScale(2, RoundingMode.HALF_EVEN);
 
-        // 2. 基础运费：首重2kg以内、首航程3km以内起步价25.00元
-        // 超里程每公里加收 3.00 元；超重每千克加收 4.00 元
-        BigDecimal base = new BigDecimal("25.00");
+        // 2. 基础运费：首重2kg以内、首航程3km以内起步价（读参数）
+        // 超里程每公里加收 paramPerKm 元；超重每千克加收 4.00 元
+        BigDecimal base = paramBaseStart;
         if (distanceKm.compareTo(new BigDecimal("3.0")) > 0) {
             BigDecimal extraDist = distanceKm.subtract(new BigDecimal("3.0"));
-            base = base.add(extraDist.multiply(new BigDecimal("3.00")));
+            base = base.add(extraDist.multiply(paramPerKm));
         }
         if (dto.getGoodsWeight().compareTo(new BigDecimal("2.0")) > 0) {
             BigDecimal extraWeight = dto.getGoodsWeight().subtract(new BigDecimal("2.0"));
@@ -65,10 +89,13 @@ public class FeeCalculatorService {
         BigDecimal feeAirspace = airspaceBase.add(distanceKm.multiply(new BigDecimal("1.50")))
                 .setScale(2, RoundingMode.HALF_EVEN);
 
-        // 4. 加急优先配送附加费：若开启加急，加急费为 (基础运费 + 空域通道费) * 0.30（总系数1.3倍）
+        // 4. 加急优先配送附加费：若开启加急，加急费为 (基础运费 + 空域通道费) * urgentRatioRate
         BigDecimal feeUrgent = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_EVEN);
         if (dto.getUrgentFlag() != null && dto.getUrgentFlag() == 1) {
-            feeUrgent = feeBase.add(feeAirspace).multiply(new BigDecimal("0.30"))
+            BigDecimal urgentRatioRate = paramUrgentRatio.compareTo(BigDecimal.ONE) > 0
+                    ? paramUrgentRatio.subtract(BigDecimal.ONE)
+                    : paramUrgentRatio;
+            feeUrgent = feeBase.add(feeAirspace).multiply(urgentRatioRate)
                     .setScale(2, RoundingMode.HALF_EVEN);
         }
 
@@ -97,7 +124,6 @@ public class FeeCalculatorService {
         vo.setFeeTotal(feeTotal);
         vo.setFormulaDesc(String.format("航程%.2fkm(基础¥%s) + 空域费(¥%s) + 加急费(¥%s) - 优惠(¥%s) = 应付¥%s",
                 distanceKm.doubleValue(), feeBase, feeAirspace, feeUrgent, feeDiscount, feeTotal));
-
         return vo;
     }
 

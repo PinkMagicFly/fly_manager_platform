@@ -38,6 +38,14 @@
         "navigationBarBackgroundColor": "#10b981",
         "navigationBarTextStyle": "white"
       }
+    {
+      "path": "pages/ticket/mine",
+      "style": {
+        "navigationBarTitleText": "客户服务与异常工单",
+        "navigationBarBackgroundColor": "#0284c7",
+        "navigationBarTextStyle": "white"
+      }
+    },
     },
     {
       "path": "pages/airspace/approval",

@@ -91,6 +91,25 @@
           <el-menu-item index="/order/dispatch">智能调度工作台</el-menu-item>
           <el-menu-item index="/order/bills" v-if="!isDispatcher">结算与账单中心</el-menu-item>
         </el-sub-menu>
+        <!-- 7. 应急与客服中心 (商户/管理员可见) -->
+        <el-sub-menu index="service-alarm" v-if="isMerchant || isAdmin">
+          <template #title>
+            <el-icon><Warning /></el-icon>
+            <span>应急监控与客服</span>
+          </template>
+          <el-menu-item index="/admin/alarm">实时告警处置台</el-menu-item>
+          <el-menu-item index="/admin/tickets">客户服务工单台</el-menu-item>
+        </el-sub-menu>
+
+        <!-- 8. 超管专属：平台治理与系统运行参数 -->
+        <el-sub-menu index="sys-config" v-if="isAdmin">
+          <template #title>
+            <el-icon><Setting /></el-icon>
+            <span>平台治理与配置</span>
+          </template>
+          <el-menu-item index="/admin/params">系统运行参数配置</el-menu-item>
+        </el-sub-menu>
+
 
 
       </el-menu>
