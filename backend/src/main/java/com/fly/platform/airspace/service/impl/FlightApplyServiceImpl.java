@@ -200,11 +200,19 @@ public class FlightApplyServiceImpl implements FlightApplyService {
             }
         }
 
-        // 2. 机长可用性核实
+        // 2. 机长可用性与时段排他性确权（校验同一机长同一时段无其他已批准或执行中任务）
         if (apply.getPilotId() != null) {
             CrewStaff pilot = crewStaffMapper.selectById(apply.getPilotId());
             if (pilot == null) {
                 throw new BusinessException(404, "指派执飞机长不存在");
+            }
+            if (apply.getStartAt() != null && apply.getEndAt() != null) {
+                List<FlightApply> pilotConflicts = flightApplyMapper.selectOverlappingPilotTasks(
+                        apply.getPilotId(), apply.getStartAt(), apply.getEndAt(), apply.getApplyId());
+                if (pilotConflicts != null && !pilotConflicts.isEmpty()) {
+                    throw new BusinessException(400, String.format("机长时段冲突拦截：责任机长[%s]在所选时段已被任务【%s】排他占用，不可批准重叠任务！",
+                            pilot.getRealName(), pilotConflicts.get(0).getApplySn()));
+                }
             }
         }
 

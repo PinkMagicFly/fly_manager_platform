@@ -153,5 +153,7 @@ public class FlightApplyStateMachine {
 
         apply.setApproveState(FlightApplyStateEnum.COMPLETED.getCode());
         apply.setApproveNote("货运无人机精准降落签收，飞行任务圆满完成");
+
+
     }
 }

@@ -77,6 +77,22 @@ public interface FlightApplyMapper extends BaseMapper<FlightApply> {
                                                     @Param("endAt") java.time.LocalDateTime endAt,
                                                     @Param("excludeApplyId") Long excludeApplyId);
 
+    /** 查询指定机长在计划时段内是否存在其他已批准或执行中的任务（机长时段防重叠冲突） */
+    @Select("<script>" +
+            "SELECT apply_id, apply_sn, order_id, merchant_id, uav_id, pilot_id, " +
+            "ST_AsText(route_line) AS route_line, alt_planned, start_at, end_at, check_state, " +
+            "approve_state, approver_id, approve_note, approve_at, created_at, updated_at, is_deleted " +
+            "FROM flight_apply WHERE pilot_id = #{pilotId} AND is_deleted = 0 " +
+            "AND approve_state IN (1, 4) " +
+            "<if test='excludeApplyId != null'> AND apply_id != #{excludeApplyId} </if> " +
+            "AND start_at &lt; #{endAt} AND end_at &gt; #{startAt}" +
+            "</script>")
+    List<FlightApply> selectOverlappingPilotTasks(@Param("pilotId") Long pilotId,
+                                                 @Param("startAt") java.time.LocalDateTime startAt,
+                                                 @Param("endAt") java.time.LocalDateTime endAt,
+                                                 @Param("excludeApplyId") Long excludeApplyId);
+
+
     /** 驳回重报全量更新单据（更新航线、时段、装备，重置审批态为待审批） */
     @Update("UPDATE flight_apply SET apply_sn = #{applySn}, uav_id = #{uavId}, pilot_id = #{pilotId}, " +
             "route_line = ST_GeomFromText(#{routeLine}), alt_planned = #{altPlanned}, " +

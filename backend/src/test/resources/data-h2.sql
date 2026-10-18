@@ -55,7 +55,9 @@ INSERT INTO uav_info (uav_id, uav_sn, model, merchant_id, max_load, max_range_km
 -- 机组人员档案 (crew_staff)
 INSERT INTO crew_staff (crew_id, account_id, crew_type, real_name, license_no, license_expire, fly_hours, status) VALUES
 (1, 4, 1, '张志强', 'CAAC-UAV-20210988', '2028-12-31', 480, 1),
-(2, 5, 2, '李维保', 'MAINT-CERT-2022011', '2027-10-30', 0, 1);
+(2, 5, 2, '李维保', 'MAINT-CERT-2022011', '2027-10-30', 0, 1),
+(3, 7, 1, '陈立军', 'CAAC-UAV-20230566', '2029-05-31', 360, 1);
+
 
 -- 系统参数 (sys_param)
 INSERT INTO sys_param (param_id, param_group, param_key, param_value, param_desc) VALUES

@@ -199,7 +199,16 @@ public class CargoOrderServiceImpl implements CargoOrderService {
         LocalDateTime endAt = dto.getEndAt() != null ? dto.getEndAt() : LocalDateTime.now().plusMinutes(45);
         int altPlanned = dto.getAltPlanned() != null ? dto.getAltPlanned() : 100;
 
+        // 问题3前置守卫：发起调度时检测机长在所选时段是否已被其他已批准(1)或执行中(4)任务排他锁定
+        List<FlightApply> pilotConflicts = flightApplyMapper.selectOverlappingPilotTasks(
+                dto.getPilotId(), startAt, endAt, existingApply != null ? existingApply.getApplyId() : null);
+        if (pilotConflicts != null && !pilotConflicts.isEmpty()) {
+            throw new BusinessException(400, String.format("机长时段冲突拦截：责任机长[%s]在所选时段已被任务【%s】排他占用，不可重复调度指派，请更换机长或调整起降时段！",
+                    pilot.getRealName(), pilotConflicts.get(0).getApplySn()));
+        }
+
         String routeLine = dto.getRouteLine();
+
         if (routeLine == null || routeLine.trim().isEmpty()) {
             throw new BusinessException(400, "规划航线折线坐标序列不能为空");
         }

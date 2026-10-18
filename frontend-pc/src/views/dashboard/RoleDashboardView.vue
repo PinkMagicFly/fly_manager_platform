@@ -63,12 +63,26 @@
             </el-button>
             <el-button v-if="isAdmin" type="info" plain @click="$router.push('/admin/audit-logs')">
               <el-icon><Document /></el-icon> 全局审计日志
+            </el-button>
             <el-button v-if="isAdmin" type="danger" plain :loading="resettingData" @click="handleResetDatabase">
               <el-icon><RefreshRight /></el-icon> 一键重置种子数据
             </el-button>
 
-            </el-button>
-            <el-button v-if="isMerchant" type="primary" plain @click="$router.push('/merchant/sub-accounts')">
+            <!-- 调度员专属快捷入口 -->
+            <template v-if="isDispatcher">
+              <el-button type="primary" plain @click="$router.push('/order/board')">
+                <el-icon><List /></el-icon> 订单综合看板
+              </el-button>
+              <el-button type="success" plain @click="$router.push('/order/dispatch')">
+                <el-icon><Compass /></el-icon> 智能调度工作台
+              </el-button>
+              <el-button type="info" plain @click="$router.push('/airspace/situation')">
+                <el-icon><Guide /></el-icon> 空域管制态势
+              </el-button>
+            </template>
+
+            <!-- 商户主账号专属快捷入口 (调度员不展示子账号设置) -->
+            <el-button v-if="isMerchant && !isDispatcher" type="primary" plain @click="$router.push('/merchant/sub-accounts')">
               <el-icon><User /></el-icon> 企业子账号设置
             </el-button>
           </div>
@@ -110,7 +124,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { UserFilled, Stamp, CreditCard, Document, User, RefreshRight } from '@element-plus/icons-vue'
+import { UserFilled, Stamp, CreditCard, Document, User, RefreshRight, List, Compass, Guide } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
 
@@ -144,15 +158,17 @@ const handleResetDatabase = () => {
   })
 }
 
-
 const isAdmin = computed(() => userStore.userInfo?.roles.includes('ROLE_ADMIN'))
-const isMerchant = computed(() => userStore.userInfo?.roles.includes('ROLE_MERCHANT') || userStore.userInfo?.accountKind === 2)
+const isDispatcher = computed(() => userStore.userInfo?.roles.includes('ROLE_DISPATCHER'))
+const isMerchant = computed(() => userStore.userInfo?.roles.includes('ROLE_MERCHANT') || userStore.userInfo?.roles.includes('ROLE_DISPATCHER') || userStore.userInfo?.accountKind === 2)
 
 const userRoleName = computed(() => {
   if (isAdmin.value) return '超级管理员'
+  if (isDispatcher.value) return '商户调度员 (顺丰速运)'
   if (isMerchant.value) return '物流商户主账号'
   return '平台操作员'
 })
+
 
 interface TodoItem {
   title: string
@@ -203,8 +219,40 @@ const fetchDashboardData = async () => {
         }
       } catch (e) {
       }
+    } else if (isDispatcher.value) {
+      // 调度员视角待办 (统计待接单与待调度，绝不调用商户主账号的子账号管理接口)
+      try {
+        const stats: any = await request.get('/api/v1/order/board-stats')
+        if (stats) {
+          if (stats.pendingDispatchCount > 0) {
+            list.push({
+              title: `当前有 ${stats.pendingDispatchCount} 笔运单处于【待调度】状态，等待指派飞行方案与申报`,
+              timestamp: '待办',
+              type: 'warning',
+              actionPath: '/order/dispatch'
+            })
+          }
+          if (stats.pendingAcceptCount > 0) {
+            list.push({
+              title: `当前有 ${stats.pendingAcceptCount} 笔运单处于【待接单】状态，请及时审核承运`,
+              timestamp: '待办',
+              type: 'primary',
+              actionPath: '/order/board'
+            })
+          }
+          if (stats.flyingCount > 0) {
+            list.push({
+              title: `当前有 ${stats.flyingCount} 架次低空无人机正处于在途配送执行中`,
+              timestamp: '执行中',
+              type: 'success',
+              actionPath: '/order/board'
+            })
+          }
+        }
+      } catch (e) {
+      }
     } else if (isMerchant.value) {
-      // 商户视角待办
+      // 商户主账号视角待办
       try {
         const archive: any = await request.get('/api/v1/merchant/my-archive')
         if (archive) {
@@ -234,6 +282,7 @@ const fetchDashboardData = async () => {
       } catch (e) {
       }
     }
+
 
     // 补充底座基线动态
     if (list.length === 0) {

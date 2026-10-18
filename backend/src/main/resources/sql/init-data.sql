@@ -132,7 +132,7 @@ INSERT INTO base_site (site_id, site_code, site_name, site_geo, capacity, occupi
 -- 8. 初始化无人机资产台账 (uav_info)
 TRUNCATE TABLE uav_info;
 INSERT INTO uav_info (uav_id, uav_sn, model, merchant_id, max_load, max_range_km, battery_pct, health_score, fly_hours, state, home_site_id) VALUES
-(1, 'UAV-FY90-001', '顺丰丰舟-90 (垂起固定翼)', 1, 20.00, 65.0, 92, 98, 142, 0, 1),
+(1, 'UAV-FY90-001', '顺丰丰舟-90 (垂起固定翼)', 1, 20.00, 65.0, 92, 98, 142, 1, 1),
 (2, 'UAV-FY90-002', '顺丰丰舟-90 (垂起固定翼)', 1, 20.00, 65.0, 85, 95, 110, 1, 1),
 (3, 'UAV-FC30-001', '大疆运载FC30 (八轴多旋翼)', 1, 30.00, 28.0, 100, 100, 45, 0, 2),
 (4, 'UAV-FC30-002', '大疆运载FC30 (八轴多旋翼)', 1, 30.00, 28.0, 40, 88, 260, 2, 2);
@@ -191,7 +191,8 @@ INSERT INTO api_endpoint (endpoint_id, service_name, endpoint_url, method, statu
 -- 14. 初始化飞行计划申报与违规案件数据
 TRUNCATE TABLE flight_apply;
 INSERT INTO flight_apply (apply_id, apply_sn, order_id, merchant_id, uav_id, pilot_id, route_line, alt_planned, start_at, end_at, check_state, approve_state, approver_id, approve_note, approve_at) VALUES
-(1, 'FA202610170001', 0, 1, 1, 1, ST_GeomFromText('LINESTRING(113.943 22.540, 114.000 22.545, 114.062 22.553)'), 100, DATE_SUB(NOW(), INTERVAL 1 HOUR), DATE_ADD(NOW(), INTERVAL 1 HOUR), 1, 0, NULL, NULL, NULL);
+(1, 'FA202610170001', 3, 1, 1, 1, ST_GeomFromText('LINESTRING(113.943 22.540, 114.000 22.545, 114.062 22.553)'), 100, DATE_SUB(NOW(), INTERVAL 1 HOUR), DATE_ADD(NOW(), INTERVAL 1 HOUR), 1, 4, 3, '合规审批通过，机长已确认起飞进入在途执行中', DATE_SUB(NOW(), INTERVAL 30 MINUTE));
+
 
 TRUNCATE TABLE violation_case;
 INSERT INTO violation_case (case_id, case_sn, apply_id, violate_kind, level, punish_state, evidence, handled_by, handled_at) VALUES 

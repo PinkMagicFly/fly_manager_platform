@@ -154,15 +154,16 @@ public class FlightApplyLockChainTest {
         CargoOrder order2 = createPendingDispatchOrder("5A02");
         Long order2Id = order2.getOrderId();
 
-        // 构造与订单1在同一时段(重叠30分钟)的派单请求，使用同一台无人机 uavId=1
+        // 构造与订单1在同一时段(重叠30分钟)的派单请求，使用同一台无人机 uavId=1，指派空闲机长3
         OrderDispatchDTO dispatchDTO2 = new OrderDispatchDTO();
         dispatchDTO2.setOrderId(order2Id);
         dispatchDTO2.setUavId(uavId);
-        dispatchDTO2.setPilotId(pilotId);
+        dispatchDTO2.setPilotId(3L);
         dispatchDTO2.setStartAt(start1.plusMinutes(30)); // 时段重叠
         dispatchDTO2.setEndAt(end1.plusMinutes(30));
         dispatchDTO2.setAltPlanned(100);
         dispatchDTO2.setRouteLine("LINESTRING(113.943000 22.540000, 114.000000 22.545000, 114.062000 22.553000)");
+
 
         CargoOrder dispatchedOrder2 = cargoOrderService.dispatchOrder(dispatchDTO2, merchantId);
         assertThat(dispatchedOrder2.getOrderState()).isEqualTo(OrderStateEnum.PENDING_DISPATCH.getCode());
@@ -208,8 +209,9 @@ public class FlightApplyLockChainTest {
         OrderDispatchDTO redispatchDTO = new OrderDispatchDTO();
         redispatchDTO.setOrderId(order2Id);
         redispatchDTO.setUavId(uavId);
-        redispatchDTO.setPilotId(pilotId);
+        redispatchDTO.setPilotId(3L);
         redispatchDTO.setStartAt(end1.plusHours(1)); // 不再冲突
+
         redispatchDTO.setEndAt(end1.plusHours(2));
         redispatchDTO.setAltPlanned(90);
         String updatedRoute = "LINESTRING(113.943000 22.540000, 114.020000 22.550000, 114.062000 22.553000)";
