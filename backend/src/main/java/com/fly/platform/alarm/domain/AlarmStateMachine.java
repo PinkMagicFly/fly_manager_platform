@@ -96,11 +96,22 @@ public class AlarmStateMachine {
         item.setAt(LocalDateTime.now().format(DATE_FORMATTER));
         item.setBy(operatorName != null ? operatorName : "系统调度中枢");
         item.setAction(action);
-        item.setNote(note);
+        // 限制单条 note 长度，防止 JSON 超出列存储上限
+        String safeNote = note != null ? note.trim() : "";
+        if (safeNote.length() > 60) {
+            safeNote = safeNote.substring(0, 60) + "...";
+        }
+        item.setNote(safeNote);
         list.add(item);
 
         try {
-            alarm.setTimeline(OBJECT_MAPPER.writeValueAsString(list));
+            String json = OBJECT_MAPPER.writeValueAsString(list);
+            // 双重安全防护：若总 JSON 超过 240 字符，保留最近 2 条记录
+            if (json.length() > 240 && list.size() > 2) {
+                list = list.subList(list.size() - 2, list.size());
+                json = OBJECT_MAPPER.writeValueAsString(list);
+            }
+            alarm.setTimeline(json);
         } catch (Exception e) {
             log.error("序列化告警时间线失败: {}", e.getMessage());
         }

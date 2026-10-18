@@ -1,5 +1,9 @@
 package com.fly.platform.alarm;
 
+import com.fly.platform.airspace.entity.FlightApply;
+import com.fly.platform.airspace.enums.FlightApplyStateEnum;
+import com.fly.platform.airspace.mapper.FlightApplyMapper;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fly.platform.alarm.dto.AlarmProcessDTO;
 import com.fly.platform.alarm.dto.AlarmReportDTO;
@@ -32,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 应急告警处置全生命周期业务流转测试
- * 覆盖：机长突发故障上报 -> 严重告警生成 -> 订单80异常中断 -> 无人机3故障 -> 处置中 -> 办结关闭及单向守卫
+ * 覆盖：机长突发故障上报 -> 严重告警生成 -> 飞行任务取消(审批台显示已取消) -> 订单重新变更为30待调度 -> 无人机3故障 -> 处置中 -> 办结关闭及单向守卫
  *
  * @author SoarCloud Team
  */
@@ -49,6 +53,9 @@ public class AlarmFlowChainTest {
 
     @Autowired
     private OrderStateFlowMapper orderStateFlowMapper;
+
+    @Autowired
+    private FlightApplyMapper flightApplyMapper;
 
     @Autowired
     private UavInfoMapper uavInfoMapper;
@@ -91,15 +98,21 @@ public class AlarmFlowChainTest {
         assertThat(alarmId).isNotNull();
         assertThat(reportResult.get("level")).isEqualTo(AlarmLevelEnum.SERIOUS.getCode());
 
-        // 3. 断言订单状态联动跃迁至 80-异常中断
-        CargoOrder abortedOrder = cargoOrderMapper.selectById(flyingOrder.getOrderId());
-        assertThat(abortedOrder.getOrderState()).isEqualTo(OrderStateEnum.ABORTED.getCode());
+        // 3. 断言飞行任务联动取消（审批台状态置为 3-已取消）
+        FlightApply apply = flightApplyMapper.selectById(flyingOrder.getApplyId());
+        assertThat(apply).isNotNull();
+        assertThat(apply.getApproveState()).isEqualTo(FlightApplyStateEnum.CANCELED.getCode());
+
+        // 断言订单状态联动回退至 30-待调度，并解绑故障无人机
+        CargoOrder redispatchOrder = cargoOrderMapper.selectById(flyingOrder.getOrderId());
+        assertThat(redispatchOrder.getOrderState()).isEqualTo(OrderStateEnum.PENDING_DISPATCH.getCode());
+        assertThat(redispatchOrder.getUavId()).isNull();
 
         // 断言订单状态流水记录
         List<OrderStateFlow> flows = orderStateFlowMapper.selectList(
                 new LambdaQueryWrapper<OrderStateFlow>()
                         .eq(OrderStateFlow::getOrderId, flyingOrder.getOrderId())
-                        .eq(OrderStateFlow::getToState, OrderStateEnum.ABORTED.getCode())
+                        .eq(OrderStateFlow::getToState, OrderStateEnum.PENDING_DISPATCH.getCode())
         );
         assertThat(flows).isNotEmpty();
         assertThat(flows.get(0).getRemark()).contains("机长故障上报");

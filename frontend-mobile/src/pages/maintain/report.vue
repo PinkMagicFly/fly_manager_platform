@@ -4,8 +4,11 @@
       <view class="form-title">现场设备故障与突发异常紧急上报</view>
 
       <view v-if="orderId" class="order-badge">
-        <text class="badge-lbl">当前关联执飞运单：</text>
-        <text class="badge-val">ID #{{ orderId }}</text>
+        <text class="badge-lbl">⚡ 关联执飞运单：</text>
+        <text class="badge-val">ID #{{ orderId }}（上报将取消任务并回退待调度）</text>
+      </view>
+      <view v-else-if="defaultUavId && isSelectingOtherUav" class="order-badge-neutral">
+        <text class="badge-lbl">ℹ️ 已切换为其他无人机：仅登记该设备故障，不影响当前执飞运单</text>
       </view>
 
       <view class="form-item">
@@ -18,7 +21,7 @@
       </view>
 
       <view class="form-item">
-        <text class="label">选择执飞/故障无人机</text>
+        <text class="label">选择目标无人机（默认当前在飞机，可切换其他）</text>
         <picker :range="uavOptions" range-key="label" :value="selectedIndex" @change="onUavChange">
           <view class="picker-val">
             {{ uavOptions[selectedIndex]?.label || '点击选择无人机' }}
@@ -43,12 +46,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import request from '../../utils/request'
 
 const orderId = ref<number | undefined>(undefined)
 const defaultUavId = ref<number | undefined>(undefined)
+const originOrderId = ref<number | undefined>(undefined)
 
 const faultTypeOptions = [
   '动力电机过热异常',
@@ -65,9 +69,16 @@ const selectedIndex = ref(0)
 const faultDesc = ref('')
 const submitting = ref(false)
 
+const isSelectingOtherUav = computed(() => {
+  if (!defaultUavId.value || uavOptions.value.length === 0) return false
+  const chosen = uavOptions.value[selectedIndex.value]
+  return chosen && chosen.id !== defaultUavId.value
+})
+
 onLoad(async (options: any) => {
   if (options?.orderId) {
     orderId.value = Number(options.orderId)
+    originOrderId.value = Number(options.orderId)
   }
   if (options?.uavId) {
     defaultUavId.value = Number(options.uavId)
@@ -76,10 +87,13 @@ onLoad(async (options: any) => {
   try {
     const list: any = await request.get('/api/v1/uav/list')
     if (list && list.length > 0) {
-      uavOptions.value = list.map((u: any) => ({
-        id: u.uavId,
-        label: `${u.uavSn} - ${u.model}`
-      }))
+      uavOptions.value = list.map((u: any) => {
+        const isCurrentFlying = defaultUavId.value && u.uavId === defaultUavId.value
+        return {
+          id: u.uavId,
+          label: isCurrentFlying ? `⚡ ${u.uavSn} - ${u.model} (当前在飞)` : `${u.uavSn} - ${u.model}`
+        }
+      })
       if (defaultUavId.value) {
         const foundIdx = uavOptions.value.findIndex(item => item.id === defaultUavId.value)
         if (foundIdx >= 0) {
@@ -96,6 +110,12 @@ const onFaultTypeChange = (e: any) => {
 
 const onUavChange = (e: any) => {
   selectedIndex.value = e.detail.value
+  const chosen = uavOptions.value[selectedIndex.value]
+  if (chosen && defaultUavId.value && chosen.id === defaultUavId.value) {
+    orderId.value = originOrderId.value
+  } else {
+    orderId.value = undefined
+  }
 }
 
 const handleSubmit = async () => {
@@ -104,16 +124,17 @@ const handleSubmit = async () => {
     return
   }
   const chosen = uavOptions.value[selectedIndex.value]
+  const targetUavId = chosen ? chosen.id : defaultUavId.value
 
   submitting.value = true
   try {
     await request.post('/api/v1/alarm/report', {
       orderId: orderId.value,
-      uavId: chosen ? chosen.id : defaultUavId.value,
+      uavId: targetUavId,
       faultType: faultTypeOptions[faultTypeIndex.value],
       description: faultDesc.value.trim()
     })
-    uni.showToast({ title: '已生成严重告警，平台将联系处置', icon: 'success' })
+    uni.showToast({ title: '已生成严重告警，任务已取消并回退待调度', icon: 'success' })
     setTimeout(() => {
       uni.navigateBack()
     }, 800)
@@ -148,16 +169,29 @@ const handleSubmit = async () => {
   border-radius: 6px;
   margin-bottom: 16px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+}
+.order-badge-neutral {
+  background-color: #f1f5f9;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
 }
 .badge-lbl {
   font-size: 12px;
   color: #b91c1c;
+  font-weight: 500;
+}
+.order-badge-neutral .badge-lbl {
+  color: #475569;
 }
 .badge-val {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: bold;
   color: #ef4444;
+  margin-top: 2px;
 }
 .form-item {
   margin-bottom: 16px;
@@ -194,3 +228,4 @@ const handleSubmit = async () => {
   margin-top: 10px;
 }
 </style>
+

@@ -34,13 +34,15 @@ public class CargoOrderStateMachine {
         ALLOWED_TRANSITIONS.put(OrderStateEnum.PENDING_DISPATCH.getCode(),
                 new HashSet<>(Arrays.asList(OrderStateEnum.PENDING_TAKEOFF.getCode(), OrderStateEnum.CANCELLED.getCode())));
 
-        // 40 待起飞 -> 50 飞行中（机长起飞执行）、80 异常中断（起飞前故障阻断）、70 已取消
+        // 40 待起飞 -> 50 飞行中、80 异常中断、70 已取消、30 待调度（故障/任务取消回退重新调度）
         ALLOWED_TRANSITIONS.put(OrderStateEnum.PENDING_TAKEOFF.getCode(),
-                new HashSet<>(Arrays.asList(OrderStateEnum.FLYING.getCode(), OrderStateEnum.ABORTED.getCode(), OrderStateEnum.CANCELLED.getCode())));
+                new HashSet<>(Arrays.asList(OrderStateEnum.FLYING.getCode(), OrderStateEnum.ABORTED.getCode(),
+                        OrderStateEnum.CANCELLED.getCode(), OrderStateEnum.PENDING_DISPATCH.getCode())));
 
-        // 50 飞行中 -> 60 已送达（客户签收并自动出账）、80 异常中断（在途迫降或突发故障）
+        // 50 飞行中 -> 60 已送达、80 异常中断、30 待调度（在途突发故障中断任务取消，订单回退重新调度）
         ALLOWED_TRANSITIONS.put(OrderStateEnum.FLYING.getCode(),
-                new HashSet<>(Arrays.asList(OrderStateEnum.DELIVERED.getCode(), OrderStateEnum.ABORTED.getCode())));
+                new HashSet<>(Arrays.asList(OrderStateEnum.DELIVERED.getCode(), OrderStateEnum.ABORTED.getCode(),
+                        OrderStateEnum.PENDING_DISPATCH.getCode())));
 
         // 终态（60 已送达、70 已取消、80 异常中断）不允许任何外向跃迁
         ALLOWED_TRANSITIONS.put(OrderStateEnum.DELIVERED.getCode(), Collections.emptySet());

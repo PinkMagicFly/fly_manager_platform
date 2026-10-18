@@ -419,7 +419,7 @@ CREATE TABLE alarm_event (
   alarm_type VARCHAR(32) NOT NULL COMMENT '告警类型',
   content VARCHAR(255) NOT NULL COMMENT '告警异常详情描述',
   handle_state TINYINT NOT NULL DEFAULT 0 COMMENT '处置状态：0-待处置 1-处置中 2-已解除恢复',
-  handle_note VARCHAR(255) DEFAULT NULL COMMENT '应急处置措施记录',
+  handle_note TEXT DEFAULT NULL COMMENT '应急处置措施与全流程时间线记录',
   handled_at DATETIME DEFAULT NULL COMMENT '告警解除时间',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '记录创建时间',
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '记录最后更新时间',

@@ -2,9 +2,14 @@ package com.fly.platform.alarm.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fly.platform.airspace.entity.FlightApply;
 import com.fly.platform.airspace.mapper.FlightApplyMapper;
+import com.fly.platform.airspace.enums.FlightApplyStateEnum;
+import java.util.Arrays;
+
 import com.fly.platform.alarm.domain.AlarmStateMachine;
 import com.fly.platform.alarm.dto.AlarmCreateDTO;
 import com.fly.platform.alarm.dto.AlarmProcessDTO;
@@ -151,31 +156,64 @@ public class AlarmEventServiceImpl implements AlarmEventService {
         }
 
         Long targetUavId = dto.getUavId();
-        Long targetApplyId = null;
-
-        // 1. 若关联了订单，进行联动
+        FlightApply apply = null;
         CargoOrder order = null;
+
+        // 1. 若指定了无人机，优先寻找当前正在由该无人机执飞或已核准的任务
+        if (targetUavId != null && targetUavId > 0) {
+            apply = flightApplyMapper.selectOne(new LambdaQueryWrapper<FlightApply>()
+                    .eq(FlightApply::getUavId, targetUavId)
+                    .in(FlightApply::getApproveState, Arrays.asList(FlightApplyStateEnum.EXECUTING.getCode(), FlightApplyStateEnum.APPROVED.getCode()))
+                    .last("LIMIT 1"));
+        }
+
+        // 2. 若指定了订单，或由 apply 反查到订单
         if (dto.getOrderId() != null && dto.getOrderId() > 0) {
             order = cargoOrderMapper.selectById(dto.getOrderId());
-            if (order != null) {
-                if (targetUavId == null) {
-                    targetUavId = order.getUavId();
-                }
-                targetApplyId = order.getApplyId();
+            if (order != null && apply == null && order.getApplyId() != null) {
+                apply = flightApplyMapper.selectById(order.getApplyId());
+            }
+        }
+        if (apply != null && apply.getOrderId() != null && apply.getOrderId() > 0 && order == null) {
+            order = cargoOrderMapper.selectById(apply.getOrderId());
+        }
 
-                // 若订单处于在途飞行中(50)或待起飞(40)，状态机联动跃迁至 80-异常中断
-                if (OrderStateEnum.FLYING.getCode().equals(order.getOrderState())
-                        || OrderStateEnum.PENDING_TAKEOFF.getCode().equals(order.getOrderState())) {
-                    cargoOrderStateMachine.transition(order, OrderStateEnum.ABORTED.getCode(),
-                            operatorId, "机长故障上报: " + dto.getFaultType() + " - " + dto.getDescription(),
-                            orderStateFlowMapper);
-                    cargoOrderMapper.updateById(order);
-                    log.warn("机长故障上报联动：订单[ID={}]已中断跃迁为80-异常中断", order.getOrderId());
-                }
+        if (targetUavId == null && apply != null) {
+            targetUavId = apply.getUavId();
+        }
+        if (targetUavId == null && order != null) {
+            targetUavId = order.getUavId();
+        }
+        Long targetApplyId = apply != null ? apply.getApplyId() : (order != null ? order.getApplyId() : null);
+
+        // 3. 飞行任务联动取消：审批台状态置为 3-已取消
+        if (apply != null) {
+            apply.setApproveState(FlightApplyStateEnum.CANCELED.getCode());
+            apply.setApproveNote("机长现场故障上报，任务已取消并释放空域及场站资源: " + dto.getFaultType());
+            apply.updateAudit();
+            flightApplyMapper.updateById(apply);
+            log.warn("机长故障上报联动：飞行计划[ID={}, SN={}]状态已置为3-已取消", apply.getApplyId(), apply.getApplySn());
+        }
+
+        // 4. 运单联动：重新变更为 30-待调度，并解绑故障无人机以允许调度台重新指派
+        if (order != null) {
+            Integer currentState = order.getOrderState();
+            if (OrderStateEnum.FLYING.getCode().equals(currentState)
+                    || OrderStateEnum.PENDING_TAKEOFF.getCode().equals(currentState)) {
+                cargoOrderStateMachine.transition(order, OrderStateEnum.PENDING_DISPATCH.getCode(),
+                        operatorId, "机长故障上报: " + dto.getFaultType() + "，飞行任务已取消，订单重新变更为待调度",
+                        orderStateFlowMapper);
+                cargoOrderMapper.update(null, new LambdaUpdateWrapper<CargoOrder>()
+                        .eq(CargoOrder::getOrderId, order.getOrderId())
+                        .set(CargoOrder::getUavId, null)
+                        .set(CargoOrder::getOrderState, OrderStateEnum.PENDING_DISPATCH.getCode())
+                        .set(CargoOrder::getUpdatedAt, LocalDateTime.now()));
+                order.setUavId(null);
+                log.warn("机长故障上报联动：订单[ID={}]状态已变更为30-待调度并解绑故障机", order.getOrderId());
             }
         }
 
-        // 2. 无人机状态联动跃迁至 3-故障
+        // 5. 无人机状态联动置为 3-故障
         if (targetUavId != null && targetUavId > 0) {
             UavInfo uav = uavInfoMapper.selectById(targetUavId);
             if (uav != null) {
@@ -183,33 +221,40 @@ public class AlarmEventServiceImpl implements AlarmEventService {
                 uav.updateAudit();
                 uavInfoMapper.updateById(uav);
                 log.warn("机长故障上报联动：无人机[ID={}, SN={}]状态已置为3-故障", uav.getUavId(), uav.getUavSn());
+            }
 
-                // 移除 Redis 在飞集合 trace:flying
-                if (stringRedisTemplate != null) {
-                    try {
-                        stringRedisTemplate.opsForSet().remove("trace:flying", String.valueOf(targetUavId));
-                    } catch (Exception e) {
-                        log.warn("从Redis在飞集合移除无人机失败: {}", e.getMessage());
-                    }
+            // 移除 Redis 在飞集合 trace:flying
+            if (stringRedisTemplate != null) {
+                try {
+                    stringRedisTemplate.opsForSet().remove("trace:flying", String.valueOf(targetUavId));
+                } catch (Exception e) {
+                    log.warn("从Redis在飞集合移除无人机失败: {}", e.getMessage());
                 }
             }
         }
 
-        // 3. 生成 2-严重 级别的告警事件记录
+        // 6. 生成 2-严重 级别的告警事件记录（严格限制字段长度，防止 SQL 截断异常）
         String sn = "ALM" + DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now())
                 + (int) (Math.random() * 9000 + 1000);
 
         AlarmEvent alarm = new AlarmEvent();
         alarm.setAlarmSn(sn);
         alarm.setLevel(AlarmLevelEnum.SERIOUS.getCode());
-        alarm.setTitle("机长故障上报: " + dto.getFaultType());
-        alarm.setContent(dto.getDescription());
+
+        String safeTitle = "机长故障上报: " + dto.getFaultType();
+        if (safeTitle.length() > 30) safeTitle = safeTitle.substring(0, 30);
+        alarm.setTitle(safeTitle);
+
+        String safeContent = dto.getDescription() != null ? dto.getDescription().trim() : "现场故障上报";
+        if (safeContent.length() > 240) safeContent = safeContent.substring(0, 240);
+        alarm.setContent(safeContent);
+
         alarm.setApplyId(targetApplyId);
         alarm.setUavId(targetUavId);
         alarm.setState(AlarmStateEnum.PENDING.getCode());
         alarm.initAudit();
 
-        alarmStateMachine.appendTimeline(alarm, opName, "机长现场故障上报", dto.getDescription());
+        alarmStateMachine.appendTimeline(alarm, opName, "机长现场故障上报", safeContent);
         alarmEventMapper.insert(alarm);
 
         Map<String, Object> result = new HashMap<>();
@@ -220,6 +265,10 @@ public class AlarmEventServiceImpl implements AlarmEventService {
         if (order != null) {
             result.put("orderId", order.getOrderId());
             result.put("orderState", order.getOrderState());
+        }
+        if (apply != null) {
+            result.put("applyId", apply.getApplyId());
+            result.put("applyState", apply.getApproveState());
         }
         return result;
     }

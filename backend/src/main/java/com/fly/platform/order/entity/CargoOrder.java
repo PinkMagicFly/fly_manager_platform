@@ -1,6 +1,9 @@
 package com.fly.platform.order.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
+import com.baomidou.mybatisplus.annotation.TableField;
+
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -82,6 +85,7 @@ public class CargoOrder extends BaseEntity {
     private Integer orderState = 10;
 
     /** 执飞无人机资产ID */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private Long uavId;
 
     /** 关联飞行申报单ID */

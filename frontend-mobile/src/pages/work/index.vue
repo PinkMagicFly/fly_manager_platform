@@ -78,7 +78,7 @@
           <text class="act-name">航前安全巡检打卡</text>
           <text class="act-tip">自检合格放行并落库</text>
         </view>
-        <view class="action-card bg-rose" @click="navTo('/pages/maintain/report')">
+        <view v-if="!activeFlyingOrder" class="action-card bg-rose" @click="navTo('/pages/maintain/report')">
           <text class="icon">⚠️</text>
           <text class="act-name">在途突发故障上报</text>
           <text class="act-tip">紧急提报并置为故障</text>
