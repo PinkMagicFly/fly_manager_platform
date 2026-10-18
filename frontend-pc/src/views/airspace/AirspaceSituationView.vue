@@ -21,6 +21,14 @@
           <span class="num text-yellow">{{ tempCount }}</span>
           <span class="lbl">临时管控区</span>
         </div>
+        <div class="stat-badge">
+          <span class="num text-blue">{{ flyingUavs.length }}</span>
+          <span class="lbl">在飞无人机</span>
+        </div>
+        <div class="stat-badge">
+          <span class="num text-purple">{{ sites.length }}</span>
+          <span class="lbl">起降场站</span>
+        </div>
       </div>
     </div>
 
@@ -44,6 +52,16 @@
         </el-checkbox>
         <el-checkbox v-model="filterTemp" @change="renderAirspacePolygons">
           <span class="legend-box bg-yellow"></span> 临时管制区 (大运中心)
+        </el-checkbox>
+        <div class="divider-line"></div>
+        <el-checkbox v-model="filterSites" @change="renderSitesLayer">
+          <span class="legend-box bg-purple"></span> 起降场站枢纽 ({{ sites.length }})
+        </el-checkbox>
+        <el-checkbox v-model="filterFlying" @change="renderFlyingLayer">
+          <span class="legend-box bg-blue"></span> 在飞无人机 ({{ flyingUavs.length }})
+        </el-checkbox>
+        <el-checkbox v-model="filterRoutes" @change="renderApprovedRoutesLayer">
+          <span class="legend-box bg-green"></span> 近24h已批航线 ({{ approvedRoutes.length }})
         </el-checkbox>
       </div>
       <div class="panel-actions">
@@ -142,7 +160,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { getAirspaceBlocks, deleteAirspaceBlock, saveAirspaceBlock, getFenceRules } from '@/api/airspace'
+import { getAirspaceBlocks, getAirspaceMapData, deleteAirspaceBlock, saveAirspaceBlock, getFenceRules } from '@/api/airspace'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 
@@ -152,10 +170,18 @@ const isAtc = computed(() => userStore.userInfo?.roles.includes('ROLE_ATC') || u
 const isAtcOrAdmin = computed(() => isAdmin.value || isAtc.value)
 
 const blocks = ref<any[]>([])
+const sites = ref<any[]>([])
+const flyingUavs = ref<any[]>([])
+const approvedRoutes = ref<any[]>([])
 const fenceRules = ref<any[]>([])
+
 const filterForbidden = ref(true)
 const filterLimited = ref(true)
 const filterTemp = ref(true)
+const filterSites = ref(true)
+const filterFlying = ref(true)
+const filterRoutes = ref(true)
+
 const drawerVisible = ref(false)
 const ruleDialogVisible = ref(false)
 const createDialogVisible = ref(false)
@@ -170,6 +196,11 @@ const createForm = ref({
 const mapType = ref<'vector' | 'satellite'>('vector')
 let mapInstance: L.Map | null = null
 let polygonLayerGroup: L.LayerGroup | null = null
+let siteLayerGroup: L.LayerGroup | null = null
+let flyingLayerGroup: L.LayerGroup | null = null
+let routeLayerGroup: L.LayerGroup | null = null
+const flyingMarkerMap = new Map<number, L.Marker>()
+let pollTimer: any = null
 let vectorLayer: L.TileLayer | null = null
 let satelliteLayer: L.LayerGroup | null = null
 
@@ -219,6 +250,9 @@ const initMap = () => {
 
   vectorLayer.addTo(mapInstance)
   polygonLayerGroup = L.layerGroup().addTo(mapInstance)
+  siteLayerGroup = L.layerGroup().addTo(mapInstance)
+  routeLayerGroup = L.layerGroup().addTo(mapInstance)
+  flyingLayerGroup = L.layerGroup().addTo(mapInstance)
 }
 
 const switchBaseMap = () => {
@@ -299,17 +333,177 @@ const renderAirspacePolygons = () => {
     mapInstance.fitBounds(combinedBounds.pad(0.15))
   }
 }
+const renderSitesLayer = () => {
+  if (!mapInstance || !siteLayerGroup) return
+  siteLayerGroup.clearLayers()
+  if (!filterSites.value) return
+
+  sites.value.forEach((site: any) => {
+    let lat = site.lat
+    let lng = site.lng
+    if ((!lat || !lng) && site.siteGeo) {
+      const match = site.siteGeo.match(/POINT\(([\d.]+)\s+([\d.]+)\)/)
+      if (match) {
+        lng = parseFloat(match[1])
+        lat = parseFloat(match[2])
+      }
+    }
+    if (!lat || !lng) return
+
+    const circle = L.circle([lat, lng], {
+      radius: 5000,
+      color: '#8b5cf6',
+      fillColor: '#8b5cf6',
+      fillOpacity: 0.08,
+      weight: 1,
+      dashArray: '4, 4'
+    })
+    siteLayerGroup!.addLayer(circle)
+
+    const siteIcon = L.divIcon({
+      className: 'site-custom-marker',
+      html: `<div class="site-badge">🏢 ${site.siteName}</div>`,
+      iconSize: [120, 24],
+      iconAnchor: [60, 12]
+    })
+
+    const marker = L.marker([lat, lng], { icon: siteIcon })
+    const popupHtml = `
+      <div style="font-size:12px; line-height:1.6; min-width:180px;">
+        <b style="color:#7c3aed; font-size:13px;">📍 ${site.siteName}</b><br/>
+        <b>场站编号:</b> ${site.siteCode}<br/>
+        <b>总机位:</b> ${site.capacity || 4} · <b>已占用:</b> ${site.occupied || 0}<br/>
+        <b>服务半径:</b> 5.0 公里覆盖圈<br/>
+        <b>运行状态:</b> <span style="color:#10b981;">正常运营</span>
+      </div>
+    `
+    marker.bindPopup(popupHtml)
+    siteLayerGroup!.addLayer(marker)
+  })
+}
+
+const renderApprovedRoutesLayer = () => {
+  if (!mapInstance || !routeLayerGroup) return
+  routeLayerGroup.clearLayers()
+  if (!filterRoutes.value) return
+
+  approvedRoutes.value.forEach((route: any) => {
+    if (!route.routePoints || route.routePoints.length < 2) return
+    const latLngs = route.routePoints.map((p: number[]) => [p[1], p[0]])
+
+    const polyline = L.polyline(latLngs, {
+      color: '#0ea5e9',
+      weight: 3,
+      opacity: 0.8,
+      dashArray: '6, 6'
+    })
+
+    const tooltipContent = `
+      <div style="font-size:11px;">
+        <b>申报任务:</b> ${route.applySn}<br/>
+        <b>执飞机号:</b> ${route.uavSn || '-'}<br/>
+        <b>机长:</b> ${route.pilotName || '-'}<br/>
+        <b>巡航高度:</b> ${route.altPlanned}m
+      </div>
+    `
+    polyline.bindTooltip(tooltipContent, { sticky: true })
+    routeLayerGroup!.addLayer(polyline)
+  })
+}
+
+const renderFlyingLayer = () => {
+  if (!mapInstance || !flyingLayerGroup) return
+
+  if (!filterFlying.value) {
+    flyingLayerGroup.clearLayers()
+    flyingMarkerMap.clear()
+    return
+  }
+
+  const currentUavIds = new Set<number>()
+
+  flyingUavs.value.forEach((uav: any) => {
+    if (uav.lat == null || uav.lng == null) return
+    const uavId = uav.uavId
+    currentUavIds.add(uavId)
+
+    const uavPos: [number, number] = [uav.lat, uav.lng]
+    const popupHtml = `
+      <div style="font-size:12px; line-height:1.6; min-width:180px;">
+        <b style="color:#0284c7; font-size:13px;">🛸 执飞无人机实时态势</b><br/>
+        <b>任务编号:</b> ${uav.applySn || '-'}<br/>
+        <b>执飞机号:</b> ${uav.uavSn || '-'} (${uav.model || '-' })<br/>
+        <b>机长飞手:</b> ${uav.pilotName || '-'}<br/>
+        <b>瞬时高度:</b> ${uav.alt != null ? uav.alt + ' 米' : '-'}<br/>
+        <b>水平地速:</b> ${uav.speed != null ? uav.speed + ' m/s' : '-'}<br/>
+        <b>剩余电量:</b> ${uav.batteryRemain != null ? uav.batteryRemain + '%' : '-'}<br/>
+        <b>任务时段:</b> ${uav.startAt ? uav.startAt.substring(11, 16) : '-'} ~ ${uav.endAt ? uav.endAt.substring(11, 16) : '-'}<br/>
+        <b>任务状态:</b> <span style="color:#10b981; font-weight:bold;">${uav.approveStateDesc || '执飞中'}</span>
+      </div>
+    `
+
+    const existingMarker = flyingMarkerMap.get(uavId)
+    if (existingMarker) {
+      existingMarker.setLatLng(uavPos)
+      existingMarker.setPopupContent(popupHtml)
+    } else {
+      const uavIcon = L.divIcon({
+        className: 'custom-uav-marker',
+        html: `<div class="uav-pin-pulse">✈️</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      })
+      const marker = L.marker(uavPos, { icon: uavIcon }).bindPopup(popupHtml)
+      flyingLayerGroup!.addLayer(marker)
+      flyingMarkerMap.set(uavId, marker)
+    }
+  })
+
+  // 降落清除
+  for (const [id, marker] of flyingMarkerMap.entries()) {
+    if (!currentUavIds.has(id)) {
+      flyingLayerGroup.removeLayer(marker)
+      flyingMarkerMap.delete(id)
+    }
+  }
+}
+
 
 const loadData = async () => {
   try {
-    const res: any = await getAirspaceBlocks()
-    blocks.value = Array.isArray(res) ? res : (res?.data || [])
+    const res: any = await getAirspaceMapData()
+    const data = res?.data || res
+    blocks.value = data?.blocks || []
+    sites.value = data?.sites || []
+    flyingUavs.value = data?.flyingUavs || []
+    approvedRoutes.value = data?.approvedRoutes || []
+
     renderAirspacePolygons()
+    renderSitesLayer()
+    renderApprovedRoutesLayer()
+    renderFlyingLayer()
 
     const ruleRes: any = await getFenceRules()
     fenceRules.value = Array.isArray(ruleRes) ? ruleRes : (ruleRes?.data || [])
   } catch (error) {
     ElMessage.error('加载空域管制数据失败')
+  }
+}
+
+const pollMapData = async () => {
+  try {
+    const res: any = await getAirspaceMapData()
+    const data = res?.data || res
+    if (data?.flyingUavs) {
+      flyingUavs.value = data.flyingUavs
+      renderFlyingLayer()
+    }
+    if (data?.approvedRoutes) {
+      approvedRoutes.value = data.approvedRoutes
+      if (filterRoutes.value) renderApprovedRoutesLayer()
+    }
+  } catch (e) {
+    console.warn('轮询空域态势数据失败:', e)
   }
 }
 
@@ -351,9 +545,14 @@ const handleDeleteBlock = (row: any) => {
 onMounted(() => {
   initMap()
   loadData()
+  pollTimer = setInterval(pollMapData, 5000)
 })
 
 onUnmounted(() => {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
   if (mapInstance) {
     mapInstance.remove()
     mapInstance = null
@@ -485,6 +684,46 @@ onUnmounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
   pointer-events: none;
 }
+
+.divider-line {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 6px 0;
+}
+.bg-purple { background: #8b5cf6; }
+.bg-blue { background: #0284c7; }
+.bg-green { background: #10b981; }
+
+.text-blue { color: #38bdf8; }
+.text-purple { color: #a78bfa; }
+
+:deep(.site-badge) {
+  background: rgba(139, 92, 246, 0.85);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  white-space: nowrap;
+}
+
+:deep(.uav-pin-pulse) {
+  font-size: 18px;
+  line-height: 28px;
+  text-align: center;
+  background: rgba(2, 132, 199, 0.25);
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.8);
+  animation: float 2s ease-in-out infinite alternate;
+}
+@keyframes float {
+  from { transform: translateY(0); }
+  to { transform: translateY(-4px); }
+}
+
 
 </style>
 

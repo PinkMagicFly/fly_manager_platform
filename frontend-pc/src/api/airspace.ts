@@ -14,6 +14,14 @@ export function getAirspaceBlocks(): Promise<any> {
   })
 }
 
+export function getAirspaceMapData(): Promise<any> {
+  return request({
+    url: '/api/v1/airspace/map-data',
+    method: 'get'
+  })
+}
+
+
 export function validateAirspaceRoute(data: {
   routePoints: number[][]
   altPlanned: number

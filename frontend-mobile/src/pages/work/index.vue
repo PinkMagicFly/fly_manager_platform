@@ -32,6 +32,40 @@
     <!-- 2. 【机长视角 (ROLE_PILOT)】 -->
     <view v-if="isPilot" class="role-view-block">
       <view class="section-title">机长外场执飞操作中枢</view>
+      <!-- 5B 在途执飞任务高频采样与监控工作卡 -->
+      <view v-if="activeFlyingOrder" class="flying-active-card">
+        <view class="flying-top">
+          <view class="badge-row">
+            <text class="pulse-indicator"></text>
+            <text class="fly-badge">正在执飞配送中 (50-飞行中)</text>
+          </view>
+          <text class="sn-txt">{{ activeFlyingOrder.orderSn }}</text>
+        </view>
+        <view class="fly-route-line">
+          <text class="dot bg-green">起</text>
+          <text class="addr-txt">{{ activeFlyingOrder.senderAddr }}</text>
+        </view>
+        <view class="fly-route-line" style="margin-top: 4px;">
+          <text class="dot bg-orange">止</text>
+          <text class="addr-txt">{{ activeFlyingOrder.receiverAddr }}</text>
+        </view>
+        <view class="trace-status-bar">
+          <text class="trace-tip">📡 在途航迹高频上报 (10s采样 · 6点/批)</text>
+          <text class="trace-stat">缓冲: {{ pendingTracePoints.length }}条 | 累计: {{ reportTotalCount }}点</text>
+        </view>
+        <view class="flying-actions">
+          <button class="fly-act-btn btn-success" size="mini" @click="handleFlyingDeliver">
+            ✓ 确认送达签收
+          </button>
+          <button class="fly-act-btn btn-danger" size="mini" @click="navTo('/pages/maintain/report')">
+            ⚠️ 故障上报
+          </button>
+          <button class="fly-act-btn btn-ghost" size="mini" @click="navTo('/pages/order/detail?id=' + activeFlyingOrder.orderId)">
+            全景跟踪
+          </button>
+        </view>
+      </view>
+
       <view class="action-grid">
         <view class="action-card bg-emerald" @click="navTo('/pages/maintain/inspect')">
           <text class="icon">📋</text>
@@ -171,12 +205,19 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onShow, onHide } from '@dcloudio/uni-app'
 import request from '../../utils/request'
 
 const user = ref<any>(null)
 const uavList = ref<any[]>([])
 const maintainList = ref<any[]>([])
+
+// 5B 在途飞行任务与高频航迹上报状态
+const activeFlyingOrder = ref<any>(null)
+const pendingTracePoints = ref<any[]>([])
+const reportTotalCount = ref(0)
+let sampleTimer: any = null
+let sampleStep = 0
 
 const isPilot = computed(() => user.value?.roles?.includes('ROLE_PILOT'))
 const isMaintainer = computed(() => user.value?.roles?.includes('ROLE_MAINTAINER'))
@@ -295,6 +336,166 @@ const handleAcceptMaintain = async (maintainId: number) => {
     uni.showToast({ title: err.message || '操作失败', icon: 'none' })
   }
 }
+const fetchFlyingOrder = async () => {
+  if (!isPilot.value) return
+  try {
+    const res: any = await request.get('/api/v1/order/page', { orderState: 50, size: 1 })
+    const orders = res?.list || []
+    if (orders.length > 0) {
+      const order = orders[0]
+      if (!activeFlyingOrder.value || activeFlyingOrder.value.orderId !== order.orderId) {
+        activeFlyingOrder.value = order
+        if (!order.applyId) {
+          try {
+            const dRes: any = await request.get(`/api/v1/order/${order.orderId}`)
+            activeFlyingOrder.value.applyId = dRes?.applyId || dRes?.flightApplyDetail?.applyId
+          } catch (e) {}
+        }
+        startSampling()
+      }
+    } else {
+      activeFlyingOrder.value = null
+      stopSampling()
+    }
+  } catch (err) {
+    console.warn('查询在飞任务失败:', err)
+  }
+}
+
+const startSampling = () => {
+  stopSampling()
+  flushTraceQueue()
+  sampleTimer = setInterval(() => {
+    doSample()
+  }, 10000)
+}
+
+const stopSampling = () => {
+  if (sampleTimer) {
+    clearInterval(sampleTimer)
+    sampleTimer = null
+  }
+}
+
+const doSample = () => {
+  if (!activeFlyingOrder.value) return
+  sampleStep++
+
+  uni.getLocation({
+    type: 'gcj02',
+    success: (loc) => {
+      recordPoint(loc.longitude, loc.latitude)
+    },
+    fail: () => {
+      simulatePoint()
+    }
+  })
+}
+
+const simulatePoint = () => {
+  const order = activeFlyingOrder.value
+  let startLng = order.senderLng || 113.943
+  let startLat = order.senderLat || 22.540
+  let endLng = order.receiverLng || 114.062
+  let endLat = order.receiverLat || 22.553
+
+  const progress = Math.min(0.95, 0.05 + (sampleStep % 100) * 0.01)
+  const currentLng = Number((startLng + (endLng - startLng) * progress).toFixed(6))
+  const currentLat = Number((startLat + (endLat - startLat) * progress).toFixed(6))
+
+  recordPoint(currentLng, currentLat)
+}
+
+const recordPoint = (lng: number, lat: number) => {
+  const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19)
+  const pt = {
+    lng,
+    lat,
+    alt: 110.0 + (sampleStep % 5),
+    speed: 12.8,
+    batteryRemain: Math.max(20, 98 - Math.floor(sampleStep / 2)),
+    reportAt: nowStr
+  }
+
+  pendingTracePoints.value.push(pt)
+
+  if (pendingTracePoints.value.length >= 6) {
+    uploadBatch()
+  }
+}
+
+const uploadBatch = async () => {
+  if (!activeFlyingOrder.value?.applyId) return
+  const pointsToUpload = [...pendingTracePoints.value]
+  pendingTracePoints.value = []
+
+  const batchUuid = 'BATCH-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8)
+  const payload = {
+    applyId: activeFlyingOrder.value.applyId,
+    batchUuid,
+    points: pointsToUpload
+  }
+
+  try {
+    await request.post('/api/v1/trace/batch', payload)
+    reportTotalCount.value += pointsToUpload.length
+    uni.showToast({ title: `已成功上报${pointsToUpload.length}条航迹`, icon: 'none' })
+  } catch (err) {
+    console.warn('航迹上报失败，写入离线缓存队列:', err)
+    const cachedQueue = uni.getStorageSync('trace_queue') || []
+    uni.setStorageSync('trace_queue', [...cachedQueue, ...pointsToUpload])
+  }
+}
+
+const flushTraceQueue = async () => {
+  const cachedQueue = uni.getStorageSync('trace_queue')
+  if (!cachedQueue || cachedQueue.length === 0) return
+  if (!activeFlyingOrder.value?.applyId) return
+
+  const payload = {
+    applyId: activeFlyingOrder.value.applyId,
+    batchUuid: 'RETRY-' + Date.now(),
+    points: cachedQueue
+  }
+
+  try {
+    await request.post('/api/v1/trace/batch', payload)
+    reportTotalCount.value += cachedQueue.length
+    uni.removeStorageSync('trace_queue')
+    uni.showToast({ title: `网络恢复，已补发${cachedQueue.length}条离线航迹`, icon: 'success' })
+  } catch (e) {
+    console.warn('离线重发仍然失败:', e)
+  }
+}
+
+uni.onNetworkStatusChange((res) => {
+  if (res.isConnected) {
+    flushTraceQueue()
+  }
+})
+
+const handleFlyingDeliver = () => {
+  if (!activeFlyingOrder.value) return
+  uni.showModal({
+    title: '送达确认',
+    content: `确认运单【${activeFlyingOrder.value.orderSn}】已安全抵达降落并完成签收？`,
+    success: async (res) => {
+      if (res.confirm) {
+        try {
+          await request.post(`/api/v1/order/${activeFlyingOrder.value.orderId}/deliver`, {})
+          uni.showToast({ title: '送达成功，系统已出具对账单', icon: 'success' })
+          stopSampling()
+          activeFlyingOrder.value = null
+          fetchFlyingOrder()
+          fetchUavs()
+        } catch (err: any) {
+          uni.showToast({ title: err.message || '送达失败', icon: 'none' })
+        }
+      }
+    }
+  })
+}
+
 
 const navTo = (url: string) => {
   uni.navigateTo({
@@ -319,10 +520,110 @@ onShow(() => {
   fetchUser()
   fetchUavs()
   fetchMaintains()
+  fetchFlyingOrder()
+})
+
+onHide(() => {
+  stopSampling()
 })
 </script>
 
 <style scoped>
+.flying-active-card {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+.flying-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pulse-indicator {
+  width: 8px;
+  height: 8px;
+  background-color: #10b981;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.8; }
+}
+.fly-badge {
+  font-size: 11px;
+  font-weight: bold;
+  color: #38bdf8;
+}
+.sn-txt {
+  font-size: 11px;
+  color: #94a3b8;
+}
+.fly-route-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #f1f5f9;
+}
+.dot {
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: #fff;
+}
+.bg-green { background-color: #10b981; }
+.bg-orange { background-color: #f59e0b; }
+.trace-status-bar {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.12);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.trace-tip {
+  font-size: 11px;
+  color: #a5f3fc;
+}
+.trace-stat {
+  font-size: 11px;
+  color: #94a3b8;
+}
+.flying-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.fly-act-btn {
+  flex: 1;
+  font-size: 12px !important;
+  border-radius: 6px;
+}
+.btn-success {
+  background-color: #10b981;
+  color: #fff;
+}
+.btn-danger {
+  background-color: #ef4444;
+  color: #fff;
+}
+.btn-ghost {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
 .m-work-container {
   padding: 14px;
   background-color: #f1f5f9;

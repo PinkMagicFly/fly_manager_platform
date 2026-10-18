@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fly.platform.trace.mapper.FlyTraceMapper">
+
+    <!-- 批量插入航迹点 -->
+    <insert id="batchInsert">
+        INSERT INTO fly_trace (apply_id, uav_id, point_geo, altitude, speed, battery_remain, report_time, created_at)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.applyId}, #{item.uavId}, ST_GeomFromText(#{item.pointWkt}), #{item.alt}, #{item.speed}, #{item.batteryRemain}, #{item.reportAt}, NOW())
+        </foreach>
+    </insert>
+
+    <!-- 按任务查询全部航迹点 -->
+    <select id="selectByApplyId" resultType="com.fly.platform.trace.entity.FlyTrace">
+        SELECT trace_id, apply_id, uav_id, ST_AsText(point_geo) AS point_wkt, altitude AS alt, speed, battery_remain, report_time AS report_at, created_at
+        FROM fly_trace
+        WHERE apply_id = #{applyId}
+        ORDER BY report_time ASC
+    </select>
+
+    <!-- 查询指定无人机最新航迹点 -->
+    <select id="selectLatestByUavId" resultType="com.fly.platform.trace.entity.FlyTrace">
+        SELECT trace_id, apply_id, uav_id, ST_AsText(point_geo) AS point_wkt, altitude AS alt, speed, battery_remain, report_time AS report_at, created_at
+        FROM fly_trace
+        WHERE uav_id = #{uavId}
+        ORDER BY report_time DESC, trace_id DESC
+        LIMIT 1
+    </select>
+
+</mapper>

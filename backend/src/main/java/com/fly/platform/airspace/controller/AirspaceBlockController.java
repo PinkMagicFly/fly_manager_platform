@@ -12,6 +12,8 @@ import com.fly.platform.airspace.vo.AirspaceBlockVO;
 import com.fly.platform.airspace.vo.AirspaceValidateResultVO;
 import com.fly.platform.airspace.vo.RoutePlanResultVO;
 import com.fly.platform.common.api.Result;
+import com.fly.platform.airspace.vo.AirspaceMapDataVO;
+
 import com.fly.platform.common.audit.Audit;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,16 @@ public class AirspaceBlockController {
     public Result<List<AirspaceBlockVO>> getAllBlocks() {
         return Result.ok(airspaceBlockService.getAllBlocks());
     }
+
+    /**
+     * 空域一张图全景态势聚合接口
+     * 一次性返回三区多边形、场站台账、实时在飞无人机及近24小时已批航线折线
+     */
+    @GetMapping("/map-data")
+    public Result<AirspaceMapDataVO> getAirspaceMapData() {
+        return Result.ok(airspaceBlockService.getMapData());
+    }
+
 
     /**
      * 航线合规碰撞毫秒级即时校验与避障纠偏

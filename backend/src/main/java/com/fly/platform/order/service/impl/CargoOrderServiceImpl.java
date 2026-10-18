@@ -24,6 +24,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.redis.core.StringRedisTemplate;
+
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -57,6 +59,8 @@ public class CargoOrderServiceImpl implements CargoOrderService {
     private final com.fly.platform.asset.service.SiteSnapService siteSnapService;
     private final com.fly.platform.airspace.mapper.AirspaceBlockMapper airspaceBlockMapper;
     private final com.fly.platform.airspace.domain.AirspaceCollisionEngine collisionEngine;
+    private final StringRedisTemplate stringRedisTemplate;
+
 
 
     @Override
@@ -319,6 +323,15 @@ public class CargoOrderServiceImpl implements CargoOrderService {
         // 联动订单状态 -> 50 飞行中
         stateMachine.transition(order, OrderStateEnum.FLYING.getCode(), operatorId, "机长确认起飞执行在途货运配送，飞行任务已进入执行中", orderStateFlowMapper);
         cargoOrderMapper.updateOrderState(orderId, order.getOrderState(), null);
+        // 联动在飞无人机心跳维护 -> 加入 trace:flying
+        if (order.getUavId() != null) {
+            try {
+                stringRedisTemplate.opsForSet().add("trace:flying", String.valueOf(order.getUavId()));
+            } catch (Exception e) {
+                log.warn("维护在飞无人机Redis心跳集合失败: {}", e.getMessage());
+            }
+        }
+
         return order;
     }
 
@@ -347,6 +360,12 @@ public class CargoOrderServiceImpl implements CargoOrderService {
                 log.warn("恢复无人机闲置异常: {}", e.getMessage());
             }
         }
+            try {
+                stringRedisTemplate.opsForSet().remove("trace:flying", String.valueOf(order.getUavId()));
+            } catch (Exception e) {
+                log.warn("心跳维护: 从Redis移除在飞无人机失败: {}", e.getMessage());
+            }
+
 
         String billSn = "BILL" + DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now())
                 + (int) (Math.random() * 9000 + 1000);
@@ -379,6 +398,10 @@ public class CargoOrderServiceImpl implements CargoOrderService {
             try {
                 uavService.changeUavState(order.getUavId(), UavStateEnum.IDLE.getCode(), "运单取消，释放无人机资产");
             } catch (Exception ignored) {}
+            try {
+                stringRedisTemplate.opsForSet().remove("trace:flying", String.valueOf(order.getUavId()));
+            } catch (Exception ignored) {}
+
         }
         return order;
     }
@@ -391,8 +414,17 @@ public class CargoOrderServiceImpl implements CargoOrderService {
 
         stateMachine.transition(order, OrderStateEnum.ABORTED.getCode(), operatorId, "配送异常中断: " + (reason != null ? reason : "突发紧急情况"), orderStateFlowMapper);
         cargoOrderMapper.updateOrderState(orderId, order.getOrderState(), null);
+
+        if (order.getUavId() != null) {
+            try {
+                stringRedisTemplate.opsForSet().remove("trace:flying", String.valueOf(order.getUavId()));
+            } catch (Exception e) {
+                log.warn("异常中断从Redis移除在飞无人机失败: {}", e.getMessage());
+            }
+        }
         return order;
     }
+
 
     @Override
     public CargoOrderDetailVO getOrderDetail(Long orderId) {

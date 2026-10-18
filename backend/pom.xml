@@ -43,6 +43,12 @@
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
 
+        <!-- Redis 缓存与分布式键值存储 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
         <!-- MyBatis-Plus 持久层 -->
         <dependency>
             <groupId>com.baomidou</groupId>

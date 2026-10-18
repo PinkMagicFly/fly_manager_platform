@@ -34,4 +34,11 @@ public interface AirspaceBlockService {
      * @return 规划折线及校验结果
      */
     com.fly.platform.airspace.vo.RoutePlanResultVO planRoute(com.fly.platform.airspace.dto.RoutePlanDTO dto);
+
+    /**
+     * 一次性聚合查询低空空域全景态势数据
+     * 包含三区管制网格、场站台账、实时在飞无人机与近24h已批航线
+     */
+    com.fly.platform.airspace.vo.AirspaceMapDataVO getMapData();
+
 }

@@ -110,6 +110,14 @@ export function getOrderDetail(id: number | string): Promise<any> {
   })
 }
 
+/** 查询订单飞行航线与实际航迹全景回放 */
+export function getOrderTrace(id: number | string): Promise<any> {
+  return request({
+    url: `/api/v1/order/${id}/trace`,
+    method: 'get'
+  })
+}
+
 /** 分页条件检索运单列表 */
 export function getOrderPage(params: any): Promise<any> {
   return request({

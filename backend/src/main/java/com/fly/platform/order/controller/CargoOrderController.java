@@ -13,6 +13,9 @@ import com.fly.platform.order.dto.OrderQueryDTO;
 import com.fly.platform.order.entity.CargoOrder;
 import com.fly.platform.order.service.CargoOrderService;
 import com.fly.platform.order.vo.*;
+import com.fly.platform.trace.service.FlyTraceService;
+import com.fly.platform.trace.vo.OrderTraceVO;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +31,8 @@ import java.util.List;
 @RequestMapping("/api/v1/order")
 @RequiredArgsConstructor
 public class CargoOrderController {
+
+    private final FlyTraceService flyTraceService;
 
     private final CargoOrderService cargoOrderService;
 
@@ -131,6 +136,13 @@ public class CargoOrderController {
     @GetMapping("/{id}")
     public Result<CargoOrderDetailVO> getOrderDetail(@PathVariable("id") Long id) {
         return Result.ok(cargoOrderService.getOrderDetail(id));
+    }
+
+
+    /** 订单飞行航线与实际航迹全景回放接口 */
+    @GetMapping("/{id}/trace")
+    public Result<OrderTraceVO> getOrderTrace(@PathVariable("id") Long id) {
+        return Result.ok(flyTraceService.getOrderTrace(id));
     }
 
     /** 分页条件检索订单列表 */

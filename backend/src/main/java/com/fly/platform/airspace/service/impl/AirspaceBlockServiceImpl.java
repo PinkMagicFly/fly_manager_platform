@@ -19,18 +19,48 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fly.platform.airspace.entity.FlightApply;
+import com.fly.platform.airspace.enums.FlightApplyStateEnum;
+import com.fly.platform.airspace.mapper.FlightApplyMapper;
+import com.fly.platform.airspace.vo.AirspaceMapDataVO;
+import com.fly.platform.airspace.vo.ApprovedRouteVO;
+import com.fly.platform.airspace.vo.FlyingUavVO;
+import com.fly.platform.asset.entity.BaseSite;
+import com.fly.platform.asset.entity.CrewStaff;
+import com.fly.platform.asset.entity.UavInfo;
+import com.fly.platform.asset.mapper.BaseSiteMapper;
+import com.fly.platform.asset.mapper.CrewStaffMapper;
+import com.fly.platform.asset.mapper.UavInfoMapper;
+import com.fly.platform.trace.entity.FlyTrace;
+import com.fly.platform.trace.mapper.FlyTraceMapper;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import java.util.Map;
+import java.util.Set;
+
 
 /**
  * 低空空域管制网格管理服务实现类
  *
  * @author SoarCloud Team
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AirspaceBlockServiceImpl implements AirspaceBlockService {
 
     private final AirspaceBlockMapper airspaceBlockMapper;
     private final AirspaceCollisionEngine collisionEngine;
+    private final BaseSiteMapper baseSiteMapper;
+    private final FlightApplyMapper flightApplyMapper;
+    private final UavInfoMapper uavInfoMapper;
+    private final CrewStaffMapper crewStaffMapper;
+    private final FlyTraceMapper flyTraceMapper;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final ObjectMapper objectMapper;
 
     @Override
     public List<AirspaceBlockVO> getAllBlocks() {
@@ -193,5 +223,121 @@ public class AirspaceBlockServiceImpl implements AirspaceBlockService {
         resultVO.setMessage(checkResult.getMessage());
         resultVO.setSuggestedAlt(checkResult.getSuggestedAlt());
         return resultVO;
+    }
+
+    @Override
+    public AirspaceMapDataVO getMapData() {
+        AirspaceMapDataVO mapDataVO = new AirspaceMapDataVO();
+        mapDataVO.setBlocks(getAllBlocks());
+
+        List<BaseSite> sites = baseSiteMapper.selectList(new LambdaQueryWrapper<BaseSite>()
+                .eq(BaseSite::getIsDeleted, 0)
+                .orderByAsc(BaseSite::getSiteId));
+        mapDataVO.setSites(sites != null ? sites : new ArrayList<>());
+        mapDataVO.setFlyingUavs(queryFlyingUavs());
+        mapDataVO.setApprovedRoutes(queryApprovedRoutes());
+        return mapDataVO;
+    }
+
+    private List<FlyingUavVO> queryFlyingUavs() {
+        List<FlyingUavVO> flyingList = new ArrayList<>();
+        try {
+            Set<String> flyingUavIds = stringRedisTemplate.opsForSet().members("trace:flying");
+            if (flyingUavIds == null || flyingUavIds.isEmpty()) return flyingList;
+
+            for (String uavIdStr : flyingUavIds) {
+                if (uavIdStr == null || uavIdStr.trim().isEmpty()) continue;
+                try {
+                    Long uavId = Long.parseLong(uavIdStr.trim());
+                    FlyingUavVO uavVO = new FlyingUavVO();
+                    uavVO.setUavId(uavId);
+
+                    UavInfo uav = uavInfoMapper.selectById(uavId);
+                    if (uav != null) {
+                        uavVO.setUavSn(uav.getUavSn());
+                        uavVO.setModel(uav.getModel());
+                    }
+
+                    FlightApply activeTask = flightApplyMapper.selectActiveExecutingTaskByUavId(uavId);
+                    if (activeTask != null) {
+                        uavVO.setApplyId(activeTask.getApplyId());
+                        uavVO.setApplySn(activeTask.getApplySn());
+                        uavVO.setStartAt(activeTask.getStartAt());
+                        uavVO.setEndAt(activeTask.getEndAt());
+                        uavVO.setApproveStateDesc(FlightApplyStateEnum.getDescByCode(activeTask.getApproveState()));
+                        if (activeTask.getPilotId() != null) {
+                            CrewStaff pilot = crewStaffMapper.selectById(activeTask.getPilotId());
+                            if (pilot != null) uavVO.setPilotName(pilot.getRealName());
+                        }
+                    }
+
+                    String latestJson = stringRedisTemplate.opsForValue().get("trace:latest:" + uavId);
+                    if (latestJson != null && !latestJson.trim().isEmpty()) {
+                        Map<String, Object> pointMap = objectMapper.readValue(latestJson, new TypeReference<Map<String, Object>>() {});
+                        if (pointMap.get("lng") != null) uavVO.setLng(((Number) pointMap.get("lng")).doubleValue());
+                        if (pointMap.get("lat") != null) uavVO.setLat(((Number) pointMap.get("lat")).doubleValue());
+                        if (pointMap.get("alt") != null) uavVO.setAlt(((Number) pointMap.get("alt")).doubleValue());
+                        if (pointMap.get("speed") != null) uavVO.setSpeed(((Number) pointMap.get("speed")).doubleValue());
+                        if (pointMap.get("batteryRemain") != null) uavVO.setBatteryRemain(((Number) pointMap.get("batteryRemain")).intValue());
+                        if (pointMap.get("reportAt") != null) {
+                            try {
+                                uavVO.setReportAt(LocalDateTime.parse(pointMap.get("reportAt").toString()));
+                            } catch (Exception ignored) {}
+                        }
+                    } else {
+                        FlyTrace trace = flyTraceMapper.selectLatestByUavId(uavId);
+                        if (trace != null) {
+                            uavVO.setLng(trace.getLng());
+                            uavVO.setLat(trace.getLat());
+                            uavVO.setAlt(trace.getAlt());
+                            uavVO.setSpeed(trace.getSpeed());
+                            uavVO.setBatteryRemain(trace.getBatteryRemain());
+                            uavVO.setReportAt(trace.getReportAt());
+                        }
+                    }
+                    flyingList.add(uavVO);
+                } catch (Exception ex) {
+                    log.warn("解析在飞无人机异常: uavId={}, error={}", uavIdStr, ex.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("获取在飞无人机列表失败: {}", e.getMessage());
+        }
+        return flyingList;
+    }
+
+    private List<ApprovedRouteVO> queryApprovedRoutes() {
+        List<ApprovedRouteVO> routeVOList = new ArrayList<>();
+        try {
+            LocalDateTime since = LocalDateTime.now().minusHours(24);
+            List<FlightApply> recentApplies = flightApplyMapper.selectRecentApprovedTasks(since);
+            if (recentApplies != null) {
+                for (FlightApply apply : recentApplies) {
+                    ApprovedRouteVO rVO = new ApprovedRouteVO();
+                    rVO.setApplyId(apply.getApplyId());
+                    rVO.setApplySn(apply.getApplySn());
+                    rVO.setOrderId(apply.getOrderId());
+                    rVO.setAltPlanned(apply.getAltPlanned());
+                    rVO.setStartAt(apply.getStartAt());
+                    rVO.setEndAt(apply.getEndAt());
+                    rVO.setApproveState(apply.getApproveState());
+                    rVO.setApproveStateDesc(FlightApplyStateEnum.getDescByCode(apply.getApproveState()));
+                    rVO.setRoutePoints(apply.parseRoutePoints());
+
+                    if (apply.getUavId() != null) {
+                        UavInfo uav = uavInfoMapper.selectById(apply.getUavId());
+                        if (uav != null) rVO.setUavSn(uav.getUavSn());
+                    }
+                    if (apply.getPilotId() != null) {
+                        CrewStaff pilot = crewStaffMapper.selectById(apply.getPilotId());
+                        if (pilot != null) rVO.setPilotName(pilot.getRealName());
+                    }
+                    routeVOList.add(rVO);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("获取近24小时已批航线列表失败: {}", e.getMessage());
+        }
+        return routeVOList;
     }
 }

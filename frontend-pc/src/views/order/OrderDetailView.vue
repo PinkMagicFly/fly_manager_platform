@@ -100,7 +100,16 @@
         </el-card>
 
         <el-card shadow="never" class="info-card" style="margin-top: 10px">
-          <template #header><div class="card-header"><span>4. 空间航线地图 (高德底座)</span></div></template>
+          <template #header>
+            <div class="card-header" style="justify-content: space-between; width: 100%;">
+              <span>4. 空间航线与在途轨迹回放 (高德底座)</span>
+              <div class="trace-legend" v-if="traceData">
+                <span class="legend-item"><span class="line bg-plan"></span> 申报航线</span>
+                <span class="legend-item"><span class="line bg-actual"></span> 实际在途航迹</span>
+                <span class="legend-item" v-if="detail?.orderState === 50"><span class="live-dot"></span> 实时执飞中 (5s轮询)</span>
+              </div>
+            </div>
+          </template>
           <div id="detail-map" class="map-box"></div>
         </el-card>
       </el-col>
@@ -109,17 +118,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getOrderDetail } from '@/api/order'
+import { getOrderDetail, getOrderTrace } from '@/api/order'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 const route = useRoute()
 const router = useRouter()
 const detail = ref<any>(null)
+const traceData = ref<any>(null)
+
 let mapInstance: L.Map | null = null
+let planPolyline: L.Polyline | null = null
+let actualPolyline: L.Polyline | null = null
+let uavMarker: L.Marker | null = null
+let pollTimer: any = null
 
 const loadDetail = async () => {
   const id = route.params.id as string
@@ -127,15 +142,56 @@ const loadDetail = async () => {
   try {
     const res: any = await getOrderDetail(id)
     detail.value = res
+    await loadTrace(id)
     nextTick(() => {
-      initMap(res)
+      initMap()
     })
+    if (res.orderState === 50) {
+      startPolling(id)
+    }
   } catch (err: any) {
     ElMessage.error(err.message || '加载订单详情失败')
   }
 }
 
-const initMap = (orderData: any) => {
+const loadTrace = async (orderId: string | number) => {
+  try {
+    const res: any = await getOrderTrace(orderId)
+    traceData.value = res?.data || res
+  } catch (e) {
+    console.warn('获取航迹回放失败:', e)
+  }
+}
+
+const startPolling = (orderId: string | number) => {
+  stopPolling()
+  pollTimer = setInterval(async () => {
+    try {
+      const res: any = await getOrderTrace(orderId)
+      const data = res?.data || res
+      traceData.value = data
+      updateActualTraceOnMap()
+      if (data.orderState && data.orderState !== 50) {
+        stopPolling()
+        if (detail.value) {
+          detail.value.orderState = data.orderState
+          detail.value.orderStateDesc = data.orderStateDesc
+        }
+      }
+    } catch (e) {
+      console.warn('航迹轮询失败:', e)
+    }
+  }, 5000)
+}
+
+const stopPolling = () => {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+}
+
+const initMap = () => {
   const container = document.getElementById('detail-map')
   if (!container) return
   if (mapInstance) {
@@ -143,63 +199,122 @@ const initMap = (orderData: any) => {
     mapInstance = null
   }
 
-  // 默认深圳中心
   mapInstance = L.map('detail-map', {
     zoomControl: true,
     attributionControl: false
   }).setView([22.540, 114.000], 12)
 
-  // 挂载高德全中文高精底图
   L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
     subdomains: ['1', '2', '3', '4'],
     minZoom: 3,
     maxZoom: 18
   }).addTo(mapInstance)
 
-  const latlngs: L.LatLngExpression[] = []
+  const boundsGroup: L.LatLng[] = []
 
-  if (orderData?.routePoints && orderData.routePoints.length >= 2) {
-    orderData.routePoints.forEach((pt: number[]) => {
-      latlngs.push([pt[1], pt[0]])
+  const planPts: L.LatLngExpression[] = []
+  if (traceData.value?.planLine && traceData.value.planLine.length >= 2) {
+    traceData.value.planLine.forEach((p: number[]) => {
+      planPts.push([p[1], p[0]])
+      boundsGroup.push(L.latLng(p[1], p[0]))
     })
-  } else if (orderData?.senderLat && orderData?.receiverLat) {
-    latlngs.push([orderData.senderLat, orderData.senderLng])
-    latlngs.push([orderData.receiverLat, orderData.receiverLng])
+  } else if (detail.value?.routePoints && detail.value.routePoints.length >= 2) {
+    detail.value.routePoints.forEach((p: number[]) => {
+      planPts.push([p[1], p[0]])
+      boundsGroup.push(L.latLng(p[1], p[0]))
+    })
+  } else if (detail.value?.senderLat && detail.value?.receiverLat) {
+    planPts.push([detail.value.senderLat, detail.value.senderLng])
+    planPts.push([detail.value.receiverLat, detail.value.receiverLng])
+    boundsGroup.push(L.latLng(detail.value.senderLat, detail.value.senderLng))
+    boundsGroup.push(L.latLng(detail.value.receiverLat, detail.value.receiverLng))
   }
 
-  if (latlngs.length >= 2) {
-    const startPoint = latlngs[0] as [number, number]
-    const endPoint = latlngs[latlngs.length - 1] as [number, number]
+  if (planPts.length >= 2) {
+    const startPoint = planPts[0] as [number, number]
+    const endPoint = planPts[planPts.length - 1] as [number, number]
 
-    // 起点绿标
     L.circleMarker(startPoint, {
       radius: 8,
       fillColor: '#10b981',
       color: '#ffffff',
       weight: 2,
       fillOpacity: 1
-    }).addTo(mapInstance).bindPopup(`<b>起点</b>: ${orderData.senderAddr || ''}`)
+    }).addTo(mapInstance).bindPopup(`<b>起点</b>: ${detail.value?.senderAddr || ''}`)
 
-    // 终点橙标
     L.circleMarker(endPoint, {
       radius: 8,
       fillColor: '#f59e0b',
       color: '#ffffff',
       weight: 2,
       fillOpacity: 1
-    }).addTo(mapInstance).bindPopup(`<b>终点</b>: ${orderData.receiverAddr || ''}`)
+    }).addTo(mapInstance).bindPopup(`<b>终点</b>: ${detail.value?.receiverAddr || ''}`)
 
-    // 规划航线折线
-    const polyline = L.polyline(latlngs, {
-      color: '#0284c7',
+    planPolyline = L.polyline(planPts, {
+      color: '#10b981',
       weight: 4,
-      dashArray: '6, 6',
-      opacity: 0.9
-    }).addTo(mapInstance)
+      opacity: 0.85
+    }).addTo(mapInstance).bindTooltip('🟢 申报合规航线', { permanent: false })
+  }
 
-    mapInstance.fitBounds(polyline.getBounds(), { padding: [40, 40] })
+  updateActualTraceOnMap()
+
+  if (boundsGroup.length >= 2 && mapInstance) {
+    mapInstance.fitBounds(L.latLngBounds(boundsGroup), { padding: [40, 40] })
   }
 }
+
+const updateActualTraceOnMap = () => {
+  if (!mapInstance) return
+
+  const actualList = traceData.value?.actual || []
+  const actualLatLngs: L.LatLngExpression[] = actualList.map((pt: any) => [pt.lat, pt.lng])
+
+  if (actualPolyline) {
+    actualPolyline.setLatLngs(actualLatLngs)
+  } else if (actualLatLngs.length >= 2) {
+    actualPolyline = L.polyline(actualLatLngs, {
+      color: '#2563eb',
+      weight: 4,
+      opacity: 0.95
+    }).addTo(mapInstance).bindTooltip('🔵 实际在途航迹', { permanent: false })
+  }
+
+  if (actualList.length > 0) {
+    const latest = actualList[actualList.length - 1]
+    const uavPos: [number, number] = [latest.lat, latest.lng]
+
+    const popupHtml = `
+      <div style="font-size:12px; line-height:1.6; min-width:160px;">
+        <b style="color:#0284c7; font-size:13px;">✈️ 执飞无人机最新状态</b><br/>
+        <b>机号:</b> ${traceData.value?.uavSn || detail.value?.uavSn || '-'}<br/>
+        <b>机型:</b> ${traceData.value?.uavModel || detail.value?.uavModel || '-'}<br/>
+        <b>高度:</b> ${latest.alt != null ? latest.alt + ' 米' : '-'}<br/>
+        <b>地速:</b> ${latest.speed != null ? latest.speed + ' m/s' : '-'}<br/>
+        <b>电量:</b> ${latest.batteryRemain != null ? latest.batteryRemain + '%' : '-'}<br/>
+        <b>时间:</b> ${latest.reportAt ? latest.reportAt.replace('T', ' ') : '-'}
+      </div>
+    `
+
+    const uavIcon = L.divIcon({
+      className: 'custom-uav-marker',
+      html: '<div class="uav-pin-pulse">✈️</div>',
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    })
+
+    if (uavMarker) {
+      uavMarker.setLatLng(uavPos)
+      uavMarker.setPopupContent(popupHtml)
+    } else {
+      uavMarker = L.marker(uavPos, { icon: uavIcon }).addTo(mapInstance).bindPopup(popupHtml)
+      if (detail.value?.orderState === 50) {
+        uavMarker.openPopup()
+      }
+    }
+  }
+}
+
 
 const goBack = () => { router.push('/order/board') }
 const goToBills = () => { router.push('/order/bills') }
@@ -229,6 +344,13 @@ const getApproveTagType = (state: number) => {
 }
 
 onMounted(() => { loadDetail() })
+onUnmounted(() => {
+  stopPolling()
+  if (mapInstance) {
+    mapInstance.remove()
+    mapInstance = null
+  }
+})
 </script>
 
 <style scoped>
@@ -243,4 +365,36 @@ onMounted(() => { loadDetail() })
 .map-box { width: 100%; height: 380px; border-radius: 6px; overflow: hidden; background: #e2e8f0; }
 .flow-title { font-size: 13px; color: #1e293b; margin-bottom: 2px; }
 .flow-desc { font-size: 12px; color: #64748b; }
+
+.trace-legend { display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: normal; color: #475569; }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.line { width: 14px; height: 4px; border-radius: 2px; }
+.bg-plan { background-color: #10b981; }
+.bg-actual { background-color: #2563eb; }
+.live-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #10b981;
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.8; }
+}
+:deep(.uav-pin-pulse) {
+  font-size: 18px;
+  line-height: 28px;
+  text-align: center;
+  background: rgba(37, 99, 235, 0.2);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.6);
+  animation: float 2s ease-in-out infinite alternate;
+}
+@keyframes float {
+  from { transform: translateY(0); }
+  to { transform: translateY(-4px); }
+}
 </style>

@@ -100,5 +100,24 @@ public interface FlightApplyMapper extends BaseMapper<FlightApply> {
             "approve_state = #{approveState}, approver_id = #{approverId}, approve_note = #{approveNote}, " +
             "approve_at = #{approveAt}, updated_at = NOW() WHERE apply_id = #{applyId}")
     int updateApplyContent(FlightApply apply);
+
+    /** 查询近24小时已批准或执行中的飞行任务列表（用于空域态势图） */
+    @Select("SELECT apply_id, apply_sn, order_id, merchant_id, uav_id, pilot_id, " +
+            "ST_AsText(route_line) AS route_line, alt_planned, start_at, end_at, check_state, " +
+            "approve_state, approver_id, approve_note, approve_at, created_at, updated_at, is_deleted " +
+            "FROM flight_apply WHERE is_deleted = 0 " +
+            "AND approve_state IN (1, 4) " +
+            "AND end_at >= #{since} " +
+            "ORDER BY apply_id DESC")
+    List<FlightApply> selectRecentApprovedTasks(@Param("since") java.time.LocalDateTime since);
+
+    /** 根据无人机ID查询当前正在执行中的任务 */
+    @Select("SELECT apply_id, apply_sn, order_id, merchant_id, uav_id, pilot_id, " +
+            "ST_AsText(route_line) AS route_line, alt_planned, start_at, end_at, check_state, " +
+            "approve_state, approver_id, approve_note, approve_at, created_at, updated_at, is_deleted " +
+            "FROM flight_apply WHERE uav_id = #{uavId} AND approve_state = 4 AND is_deleted = 0 " +
+            "ORDER BY apply_id DESC LIMIT 1")
+    FlightApply selectActiveExecutingTaskByUavId(@Param("uavId") Long uavId);
+
 }
 

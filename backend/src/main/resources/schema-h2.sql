@@ -345,3 +345,18 @@ CREATE TABLE violation_case (
   is_deleted TINYINT NOT NULL DEFAULT 0
 );
 
+-- 24. 飞行轨迹明细数据表 (fly_trace)
+DROP TABLE IF EXISTS fly_trace;
+CREATE TABLE fly_trace (
+  trace_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  apply_id BIGINT NOT NULL,
+  uav_id BIGINT NOT NULL,
+  point_geo VARCHAR(64) NOT NULL,
+  altitude DECIMAL(6,2) NOT NULL,
+  speed DECIMAL(5,2) NOT NULL,
+  battery_remain TINYINT NOT NULL DEFAULT 100,
+  report_time TIMESTAMP NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+
