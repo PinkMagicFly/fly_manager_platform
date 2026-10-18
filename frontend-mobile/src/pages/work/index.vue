@@ -189,6 +189,12 @@
           <text class="act-name">我的物流运单</text>
           <text class="act-tip">查看在途轨迹与签收</text>
         </view>
+        <view class="action-card bg-amber" @click="navTo('/pages/ticket/mine')">
+          <text class="icon">🎧</text>
+          <text class="act-name">客户服务与工单</text>
+          <text class="act-tip">发起咨询与投诉跟踪</text>
+        </view>
+
       </view>
 
       <view class="content-card">

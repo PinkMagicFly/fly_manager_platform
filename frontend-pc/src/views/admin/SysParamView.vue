@@ -97,7 +97,7 @@ const loading = ref(false)
 const saving = ref(false)
 
 const feeParams = computed(() => allParams.value.filter(p => p.groupName === 'fee' || p.paramKey.startsWith('fee.')))
-const orderParams = computed(() => allParams.value.filter(p => p.groupName === 'order' || p.paramKey.startsWith('order.')))
+const orderParams = computed(() => allParams.value.filter(p => (p.groupName === 'order' || p.paramKey.startsWith('order.')) && p.paramKey !== 'order.timeout_pay_minutes' && p.paramKey !== 'ORDER_AUTO_CANCEL_MINUTES'))
 const alarmParams = computed(() => allParams.value.filter(p => p.groupName === 'alarm' || p.paramKey.startsWith('alarm.')))
 
 const loadParams = async () => {

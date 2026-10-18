@@ -3,7 +3,10 @@
     <view class="nav-bar">
       <text class="back-btn" @click="goBack">‹ 工作台</text>
       <text class="page-title">低空物流运单池</text>
-      <text class="add-btn" @click="goToCreate">+ 寄件</text>
+      <view class="nav-right">
+        <text class="ticket-link" @click="goToTicket">🎧 客服工单</text>
+        <text class="add-btn" @click="goToCreate">+ 寄件</text>
+      </view>
     </view>
 
     <!-- 状态滑动过滤Tab -->
@@ -161,6 +164,8 @@ const goToCreate = () => {
 }
 const goToDetail = (orderId: number) => { uni.navigateTo({ url: `/pages/order/detail?id=${orderId}` }) }
 const goBack = () => { uni.reLaunch({ url: '/pages/work/index' }) }
+const goToTicket = () => { uni.navigateTo({ url: '/pages/ticket/mine' }) }
+
 
 onShow(() => {
   initUser()
@@ -192,6 +197,9 @@ onMounted(() => {
 .back-btn { font-size: 15px; font-weight: 500; }
 .page-title { font-size: 16px; font-weight: bold; }
 .add-btn { font-size: 14px; font-weight: bold; background: rgba(255, 255, 255, 0.2); padding: 4px 10px; border-radius: 12px; }
+.nav-right { display: flex; align-items: center; gap: 8px; }
+.ticket-link { font-size: 13px; font-weight: 500; background: rgba(255, 255, 255, 0.15); padding: 4px 8px; border-radius: 12px; }
+
 .tab-scroll { background: #fff; border-bottom: 1px solid #e2e8f0; white-space: nowrap; height: 42px; }
 .tab-list { display: flex; padding: 0 8px; }
 .tab-item { padding: 10px 12px; font-size: 13px; color: #64748b; white-space: nowrap; }

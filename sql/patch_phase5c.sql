@@ -6,3 +6,7 @@
 USE soarcloud_lae;
 
 ALTER TABLE alarm_event MODIFY COLUMN handle_note TEXT DEFAULT NULL COMMENT '应急处置措施与全流程时间线记录';
+
+-- 2. 客户下单即支付闭环，取消无法测试的待支付超时取消参数设置
+UPDATE sys_param SET is_deleted = 1 WHERE param_key IN ('order.timeout_pay_minutes', 'ORDER_AUTO_CANCEL_MINUTES');
+
