@@ -24,7 +24,9 @@
             <el-table-column prop="paramKey" label="参数键 (Key)" width="220">
               <template #default="{ row }"><span class="font-mono text-bold">{{ row.paramKey }}</span></template>
             </el-table-column>
-            <el-table-column prop="remark" label="参数说明" min-width="220" />
+            <el-table-column label="参数业务含义" min-width="220">
+              <template #default="{ row }"><span>{{ getParamRemark(row) }}</span></template>
+            </el-table-column>
             <el-table-column label="生效值" width="220">
               <template #default="{ row }"><el-input v-model="row.paramValue" size="small" /></template>
             </el-table-column>
@@ -47,7 +49,9 @@
             <el-table-column prop="paramKey" label="参数键 (Key)" width="220">
               <template #default="{ row }"><span class="font-mono text-bold">{{ row.paramKey }}</span></template>
             </el-table-column>
-            <el-table-column prop="remark" label="参数说明" min-width="220" />
+            <el-table-column label="参数业务含义" min-width="220">
+              <template #default="{ row }"><span>{{ getParamRemark(row) }}</span></template>
+            </el-table-column>
             <el-table-column label="生效值" width="220">
               <template #default="{ row }"><el-input v-model="row.paramValue" size="small" /></template>
             </el-table-column>
@@ -70,7 +74,9 @@
             <el-table-column prop="paramKey" label="参数键 (Key)" width="220">
               <template #default="{ row }"><span class="font-mono text-bold">{{ row.paramKey }}</span></template>
             </el-table-column>
-            <el-table-column prop="remark" label="参数说明" min-width="220" />
+            <el-table-column label="参数业务含义" min-width="220">
+              <template #default="{ row }"><span>{{ getParamRemark(row) }}</span></template>
+            </el-table-column>
             <el-table-column label="生效值" width="220">
               <template #default="{ row }"><el-input v-model="row.paramValue" size="small" /></template>
             </el-table-column>
@@ -99,6 +105,27 @@ const saving = ref(false)
 const feeParams = computed(() => allParams.value.filter(p => p.groupName === 'fee' || p.paramKey.startsWith('fee.')))
 const orderParams = computed(() => allParams.value.filter(p => (p.groupName === 'order' || p.paramKey.startsWith('order.')) && p.paramKey !== 'order.timeout_pay_minutes' && p.paramKey !== 'ORDER_AUTO_CANCEL_MINUTES'))
 const alarmParams = computed(() => allParams.value.filter(p => p.groupName === 'alarm' || p.paramKey.startsWith('alarm.')))
+const paramDescMap: Record<string, string> = {
+  'fee.base_start': '低空货运首重起步运费（元）',
+  'fee.per_km': '超航程每公里附加单价（元/km）',
+  'fee.urgent_ratio': '加急配送费率倍率系数',
+  'order.timeout_accept_minutes': '商户待接单超时自动取消时间（分钟）',
+  'alarm.timeout_minutes': '告警超时未处置预警时间（分钟）',
+  'alarm.route_deviation_meters': '在途飞行偏航告警阈值（米）',
+  'BASE_FREIGHT_PRICE': '低空货运首重起步运费（元）',
+  'PER_KM_SURCHARGE': '每千米航程附加费（元/km）',
+  'AIRSPACE_PASS_PRICE': '每单法定低空空域通道使用费（元）',
+  'ROUTE_DEVIATION_METERS': '飞行航线偏航触发告警最大允许偏离距离（米）',
+  'LOW_BATTERY_PERCENT': '在途低电量自动返航告警百分比阈值'
+}
+
+const getParamRemark = (row: any) => {
+  if (row.paramKey && paramDescMap[row.paramKey]) {
+    return paramDescMap[row.paramKey]
+  }
+  return row.remark || '-'
+}
+
 
 const loadParams = async () => {
   loading.value = true

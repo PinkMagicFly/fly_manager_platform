@@ -38,6 +38,7 @@
         "navigationBarBackgroundColor": "#10b981",
         "navigationBarTextStyle": "white"
       }
+    },
     {
       "path": "pages/ticket/mine",
       "style": {
@@ -45,7 +46,6 @@
         "navigationBarBackgroundColor": "#0284c7",
         "navigationBarTextStyle": "white"
       }
-    },
     },
     {
       "path": "pages/airspace/approval",

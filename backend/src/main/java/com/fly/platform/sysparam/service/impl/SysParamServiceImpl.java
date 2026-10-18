@@ -42,6 +42,18 @@ public class SysParamServiceImpl implements SysParamService {
     /** 内存级参数高速缓存字典，实现毫秒级读取与热刷新 */
     private final Map<String, String> paramCache = new ConcurrentHashMap<>();
 
+    private static final Map<String, String> DEFAULT_REMARKS = Map.of(
+            "fee.base_start", "低空货运首重起步运费（元）",
+            "fee.per_km", "超航程每公里附加单价（元/km）",
+            "fee.urgent_ratio", "加急配送费率倍率系数",
+            "order.timeout_accept_minutes", "商户待接单超时自动取消时间（分钟）",
+            "alarm.timeout_minutes", "告警超时未处置预警时间（分钟）",
+            "alarm.route_deviation_meters", "在途飞行偏航告警阈值（米）",
+            "BASE_FREIGHT_PRICE", "低空货运首重起步运费（元）",
+            "PER_KM_SURCHARGE", "每千米航程附加费（元/km）",
+            "AIRSPACE_PASS_PRICE", "每单法定低空空域通道使用费（元）"
+    );
+
     @Override
     public String get(String key) {
         if (key == null || key.trim().isEmpty()) {
@@ -134,7 +146,11 @@ public class SysParamServiceImpl implements SysParamService {
             vo.setGroupName(p.getGroupName());
             vo.setParamKey(p.getParamKey());
             vo.setParamValue(p.getParamValue());
-            vo.setRemark(p.getRemark());
+            String remark = p.getRemark();
+            if (remark == null || remark.contains("?") || remark.contains("ä") || remark.contains("è") || DEFAULT_REMARKS.containsKey(p.getParamKey())) {
+                remark = DEFAULT_REMARKS.getOrDefault(p.getParamKey(), remark != null ? remark : "-");
+            }
+            vo.setRemark(remark);
             return vo;
         }).collect(Collectors.toList());
     }
