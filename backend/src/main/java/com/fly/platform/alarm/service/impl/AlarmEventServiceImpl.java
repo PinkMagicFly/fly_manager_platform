@@ -190,8 +190,9 @@ public class AlarmEventServiceImpl implements AlarmEventService {
         if (apply != null) {
             apply.setApproveState(FlightApplyStateEnum.CANCELED.getCode());
             apply.setApproveNote("机长现场故障上报，任务已取消并释放空域及场站资源: " + dto.getFaultType());
+            apply.setApproveAt(LocalDateTime.now());
             apply.updateAudit();
-            flightApplyMapper.updateById(apply);
+            flightApplyMapper.updateApproveState(apply);
             log.warn("机长故障上报联动：飞行计划[ID={}, SN={}]状态已置为3-已取消", apply.getApplyId(), apply.getApplySn());
         }
 
