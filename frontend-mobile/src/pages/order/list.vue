@@ -32,6 +32,7 @@
           <text class="sn">{{ item.orderSn }}</text>
           <view class="badges">
             <text v-if="item.urgentFlag === 1" class="badge bg-red">加急</text>
+            <text v-if="isPilot && (item.pilotName === '张志强' || item.pilotId === 1)" class="badge bg-emerald">本人执飞</text>
             <text class="badge" :class="'state-' + item.orderState">{{ item.orderStateDesc }}</text>
           </view>
         </view>
@@ -39,6 +40,13 @@
         <view class="addr-box">
           <view class="addr-line"><text class="dot bg-green">起</text> <text class="txt">{{ item.senderAddr }}</text></view>
           <view class="addr-line" style="margin-top: 6px"><text class="dot bg-orange">止</text> <text class="txt">{{ item.receiverAddr }}</text></view>
+        </view>
+
+        <!-- 执飞无人机与机长全息透出 -->
+        <view class="uav-pilot-row" v-if="item.uavSn || item.pilotName || item.applySn">
+          <text v-if="item.uavSn" class="tag-uav">🛸 {{ item.uavSn }}</text>
+          <text v-if="item.pilotName" class="tag-pilot">👨‍✈️ 机长: {{ item.pilotName }}</text>
+          <text v-if="item.applySn" class="tag-apply">📋 {{ item.applySn }}</text>
         </view>
 
         <view class="meta-row">
@@ -60,13 +68,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import request from '../../utils/request'
 
 const loading = ref(false)
 const orderList = ref<any[]>([])
 const currentTab = ref('ALL')
+const user = ref<any>(null)
+const isPilot = computed(() => user.value?.roles?.includes('ROLE_PILOT'))
+
+const initUser = () => {
+  const cached = uni.getStorageSync('soarcloud_mobile_user')
+  if (cached) {
+    try { user.value = JSON.parse(cached) } catch (e) {}
+  }
+}
 
 const tabList = [
   { val: 'ALL', label: '全部' },
@@ -145,11 +162,31 @@ const goToCreate = () => {
 const goToDetail = (orderId: number) => { uni.navigateTo({ url: `/pages/order/detail?id=${orderId}` }) }
 const goBack = () => { uni.reLaunch({ url: '/pages/work/index' }) }
 
-onShow(() => { loadOrders() })
-onMounted(() => { loadOrders() })
+onShow(() => {
+  initUser()
+  loadOrders()
+})
+onMounted(() => {
+  initUser()
+  loadOrders()
+})
 </script>
 
 <style scoped>
+.uav-pilot-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: #f1f5f9;
+  padding: 6px 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+.tag-uav { color: #0369a1; font-weight: 500; }
+.tag-pilot { color: #047857; font-weight: 500; }
+.tag-apply { color: #64748b; }
+.bg-emerald { background-color: #10b981; color: #fff; font-weight: bold; }
 .m-order-list-container { display: flex; flex-direction: column; height: 100vh; background: #f8fafc; }
 .nav-bar { display: flex; justify-content: space-between; align-items: center; padding: 36px 14px 10px 14px; background: #0284c7; color: #fff; }
 .back-btn { font-size: 15px; font-weight: 500; }

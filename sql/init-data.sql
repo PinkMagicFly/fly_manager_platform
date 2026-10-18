@@ -132,10 +132,15 @@ INSERT INTO base_site (site_id, site_code, site_name, site_geo, capacity, occupi
 -- 8. 初始化无人机资产台账 (uav_info)
 TRUNCATE TABLE uav_info;
 INSERT INTO uav_info (uav_id, uav_sn, model, merchant_id, max_load, max_range_km, battery_pct, health_score, fly_hours, state, home_site_id) VALUES
-(1, 'UAV-FY90-001', '顺丰丰舟-90 (垂起固定翼)', 1, 20.00, 65.0, 92, 98, 142, 1, 1),
+(1, 'UAV-FY90-001', '顺丰丰舟-90 (垂起固定翼)', 1, 20.00, 65.0, 92, 98, 142, 0, 1),
 (2, 'UAV-FY90-002', '顺丰丰舟-90 (垂起固定翼)', 1, 20.00, 65.0, 85, 95, 110, 1, 1),
 (3, 'UAV-FC30-001', '大疆运载FC30 (八轴多旋翼)', 1, 30.00, 28.0, 100, 100, 45, 0, 2),
 (4, 'UAV-FC30-002', '大疆运载FC30 (八轴多旋翼)', 1, 30.00, 28.0, 40, 88, 260, 2, 2);
+
+-- 8.1 初始化无人机维保与巡检工单 (uav_maintain)
+TRUNCATE TABLE uav_maintain;
+INSERT INTO uav_maintain (maintain_id, uav_id, maintain_type, maintain_state, fault_desc, repair_content, created_at) VALUES
+(1, 4, 1, 1, '大疆FC30动力总成例行50小时巡检与桨叶动平衡调校', NULL, DATE_SUB(NOW(), INTERVAL 2 HOUR));
 
 -- 9. 初始化机组人员档案 (crew_staff)
 TRUNCATE TABLE crew_staff;
@@ -191,8 +196,8 @@ INSERT INTO api_endpoint (endpoint_id, service_name, endpoint_url, method, statu
 -- 14. 初始化飞行计划申报与违规案件数据
 TRUNCATE TABLE flight_apply;
 INSERT INTO flight_apply (apply_id, apply_sn, order_id, merchant_id, uav_id, pilot_id, route_line, alt_planned, start_at, end_at, check_state, approve_state, approver_id, approve_note, approve_at) VALUES
-(1, 'FA202610170001', 3, 1, 1, 1, ST_GeomFromText('LINESTRING(113.943 22.540, 114.000 22.545, 114.062 22.553)'), 100, DATE_SUB(NOW(), INTERVAL 1 HOUR), DATE_ADD(NOW(), INTERVAL 1 HOUR), 1, 4, 3, '合规审批通过，机长已确认起飞进入在途执行中', DATE_SUB(NOW(), INTERVAL 30 MINUTE));
-
+(1, 'FA202610170001', 3, 1, 2, 1, ST_GeomFromText('LINESTRING(113.943 22.540, 114.000 22.545, 114.062 22.553)'), 100, DATE_SUB(NOW(), INTERVAL 1 HOUR), DATE_ADD(NOW(), INTERVAL 1 HOUR), 1, 4, 3, '合规审批通过，机长已确认起飞进入在途执行中', DATE_SUB(NOW(), INTERVAL 30 MINUTE)),
+(2, 'FA202610170000', 4, 1, 1, 1, ST_GeomFromText('LINESTRING(114.218 22.695, 114.240 22.690, 114.265 22.578)'), 90, DATE_SUB(NOW(), INTERVAL 3 HOUR), DATE_SUB(NOW(), INTERVAL 1 HOUR), 1, 5, 3, '飞行任务已圆满完成送达', DATE_SUB(NOW(), INTERVAL 3 HOUR));
 
 TRUNCATE TABLE violation_case;
 INSERT INTO violation_case (case_id, case_sn, apply_id, violate_kind, level, punish_state, evidence, handled_by, handled_at) VALUES 
@@ -206,8 +211,8 @@ TRUNCATE TABLE cargo_order;
 INSERT INTO cargo_order (order_id, order_sn, customer_id, merchant_id, sender_addr, receiver_addr, sender_geo, receiver_geo, goods_type, goods_weight, urgent_flag, fee_base, fee_airspace, fee_urgent, fee_discount, fee_total, pay_way, pay_state, order_state, uav_id, apply_id, expect_arrive_at) VALUES
 (1, 'ORD202610170001', 1, 1, '南山科技园低空枢纽（深圳湾）', '深圳大学总医院急诊楼起降坪', ST_GeomFromText('POINT(113.952 22.532)'), ST_GeomFromText('POINT(113.987 22.592)'), 2, 5.50, 1, 45.00, 25.00, 21.00, 3.00, 88.00, 1, 1, 20, NULL, NULL, DATE_ADD(NOW(), INTERVAL 2 HOUR)),
 (2, 'ORD202610170002', 1, 1, '南山科技园枢纽站A区', '福田CBD深业上城楼顶起降场', ST_GeomFromText('POINT(113.943 22.540)'), ST_GeomFromText('POINT(114.062 22.553)'), 3, 12.00, 0, 42.00, 28.50, 0.00, 5.00, 65.50, 1, 1, 30, NULL, NULL, DATE_ADD(NOW(), INTERVAL 3 HOUR)),
-(3, 'ORD202610170003', 1, 1, '南山科技园枢纽站B区', '福田CBD深业上城楼顶起降场', ST_GeomFromText('POINT(113.943 22.540)'), ST_GeomFromText('POINT(114.062 22.553)'), 4, 8.00, 1, 55.00, 30.00, 25.00, 0.00, 110.00, 1, 1, 50, 1, 1, DATE_ADD(NOW(), INTERVAL 30 MINUTE)),
-(4, 'ORD202610170004', 1, 1, '龙岗大运智慧物流场站', '盐田港综合保税区中转站', ST_GeomFromText('POINT(114.218 22.695)'), ST_GeomFromText('POINT(114.265 22.578)'), 1, 1.50, 0, 25.00, 15.00, 0.00, 5.00, 35.00, 1, 1, 60, 2, NULL, DATE_SUB(NOW(), INTERVAL 1 HOUR));
+(3, 'ORD202610170003', 1, 1, '南山科技园枢纽站B区', '福田CBD深业上城楼顶起降场', ST_GeomFromText('POINT(113.943 22.540)'), ST_GeomFromText('POINT(114.062 22.553)'), 4, 8.00, 1, 55.00, 30.00, 25.00, 0.00, 110.00, 1, 1, 50, 2, 1, DATE_ADD(NOW(), INTERVAL 30 MINUTE)),
+(4, 'ORD202610170004', 1, 1, '龙岗大运智慧物流场站', '盐田港综合保税区中转站', ST_GeomFromText('POINT(114.218 22.695)'), ST_GeomFromText('POINT(114.265 22.578)'), 1, 1.50, 0, 25.00, 15.00, 0.00, 5.00, 35.00, 1, 1, 60, 1, 2, DATE_SUB(NOW(), INTERVAL 1 HOUR));
 
 -- 16. 初始化订单状态流水表 (order_state_flow)
 TRUNCATE TABLE order_state_flow;
@@ -217,20 +222,27 @@ INSERT INTO order_state_flow (flow_id, order_id, from_state, to_state, operator_
 (3, 2, 20, 30, 2, '商户调度中心确认承接该运单'),
 (4, 3, 10, 20, 6, '客户在线支付成功'),
 (5, 3, 20, 30, 2, '商户确认接单进入调度队列'),
-(6, 3, 30, 40, 2, '调度员指派无人机UAV-FY90-001并联动申报飞行计划'),
-(7, 3, 40, 50, 4, '机长完成航前巡检并确认起飞执行在途运输'),
+(6, 3, 30, 40, 2, '调度员指派无人机UAV-FY90-002并联动申报飞行计划'),
+(7, 3, 40, 50, 4, '机长完成航前巡检并确认起飞执行在途运输，执飞机号UAV-FY90-002'),
 (8, 4, 10, 20, 6, '客户在线支付成功'),
 (9, 4, 20, 30, 2, '商户接单'),
-(10, 4, 30, 40, 2, '指派无人机完成调度'),
+(10, 4, 30, 40, 2, '指派无人机UAV-FY90-001完成调度'),
 (11, 4, 40, 50, 4, '起飞执行'),
-(12, 4, 50, 60, 4, '已安全精准降落目的地，客户签收完成');
+(12, 4, 50, 60, 4, '已安全精准降落目的地，客户签收完成，设备恢复闲置');
 
 -- 17. 初始化货运结算对账单表 (settle_bill)
 TRUNCATE TABLE settle_bill;
 INSERT INTO settle_bill (bill_id, bill_sn, order_id, merchant_id, amount, bill_state, invoice_flag, settle_at) VALUES
 (1, 'BILL202610170001', 4, 1, 35.00, 1, 0, NOW());
 
-
-
+-- 18. 初始化在途飞行航迹明细 (fly_trace) - 为当前执行中的任务1预置在途航迹点
+TRUNCATE TABLE fly_trace;
+INSERT INTO fly_trace (trace_id, apply_id, uav_id, point_geo, altitude, speed, battery_remain, report_time, created_at) VALUES
+(1, 1, 2, ST_GeomFromText('POINT(113.943000 22.540000)'), 100.00, 12.50, 95, DATE_SUB(NOW(), INTERVAL 15 MINUTE), NOW()),
+(2, 1, 2, ST_GeomFromText('POINT(113.955000 22.541000)'), 102.00, 12.80, 94, DATE_SUB(NOW(), INTERVAL 12 MINUTE), NOW()),
+(3, 1, 2, ST_GeomFromText('POINT(113.970000 22.542500)'), 101.50, 13.00, 93, DATE_SUB(NOW(), INTERVAL 9 MINUTE), NOW()),
+(4, 1, 2, ST_GeomFromText('POINT(113.985000 22.543800)'), 100.00, 12.60, 92, DATE_SUB(NOW(), INTERVAL 6 MINUTE), NOW()),
+(5, 1, 2, ST_GeomFromText('POINT(114.000000 22.545000)'), 103.00, 12.40, 91, DATE_SUB(NOW(), INTERVAL 3 MINUTE), NOW()),
+(6, 1, 2, ST_GeomFromText('POINT(114.015000 22.546500)'), 102.00, 12.50, 90, NOW(), NOW());
 
 SET FOREIGN_KEY_CHECKS = 1;

@@ -52,6 +52,10 @@ INSERT INTO uav_info (uav_id, uav_sn, model, merchant_id, max_load, max_range_km
 (3, 'UAV-FC30-001', '大疆运载FC30 (八轴多旋翼)', 1, 30.00, 28.0, 100, 100, 45, 0, 2),
 (4, 'UAV-FC30-002', '大疆运载FC30 (八轴多旋翼)', 1, 30.00, 28.0, 40, 88, 260, 2, 2);
 
+-- 维保记录 (uav_maintain)
+INSERT INTO uav_maintain (maintain_id, uav_id, maintain_type, maintain_state, fault_desc, repair_content, created_at) VALUES
+(1, 4, 1, 1, '大疆FC30动力总成例行50小时巡检与桨叶动平衡调校', NULL, DATEADD('HOUR', -2, CURRENT_TIMESTAMP));
+
 -- 机组人员档案 (crew_staff)
 INSERT INTO crew_staff (crew_id, account_id, crew_type, real_name, license_no, license_expire, fly_hours, status) VALUES
 (1, 4, 1, '张志强', 'CAAC-UAV-20210988', '2028-12-31', 480, 1),

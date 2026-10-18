@@ -41,6 +41,12 @@
           </view>
           <text class="sn-txt">{{ activeFlyingOrder.orderSn }}</text>
         </view>
+        <view class="fly-info-meta">
+          <text class="meta-tag">🛸 {{ activeFlyingOrder.uavSn || 'UAV-FY90-001' }}</text>
+          <text class="meta-tag">📋 {{ activeFlyingOrder.applySn || 'FA202610170001' }}</text>
+          <text class="meta-tag">👨‍✈️ 机长: {{ activeFlyingOrder.pilotName || '张志强' }}</text>
+        </view>
+
         <view class="fly-route-line">
           <text class="dot bg-green">起</text>
           <text class="addr-txt">{{ activeFlyingOrder.senderAddr }}</text>
@@ -260,7 +266,7 @@ const roleStats = computed(() => {
     return [
       { label: '安全执飞', value: '480h' },
       { label: '执照状态', value: '正常' },
-      { label: '在飞任务', value: '1单' }
+      { label: '在飞任务', value: activeFlyingOrder.value ? '1单' : '0单' }
     ]
   }
   if (isMaintainer.value) {
@@ -337,22 +343,24 @@ const handleAcceptMaintain = async (maintainId: number) => {
   }
 }
 const fetchFlyingOrder = async () => {
-  if (!isPilot.value) return
   try {
-    const res: any = await request.get('/api/v1/order/page', { orderState: 50, size: 1 })
+    const res: any = await request.get('/api/v1/order/page', { orderState: 50, size: 5 })
     const orders = res?.list || []
     if (orders.length > 0) {
       const order = orders[0]
-      if (!activeFlyingOrder.value || activeFlyingOrder.value.orderId !== order.orderId) {
-        activeFlyingOrder.value = order
-        if (!order.applyId) {
-          try {
-            const dRes: any = await request.get(`/api/v1/order/${order.orderId}`)
-            activeFlyingOrder.value.applyId = dRes?.applyId || dRes?.flightApplyDetail?.applyId
-          } catch (e) {}
-        }
-        startSampling()
+      activeFlyingOrder.value = order
+      if (!order.applyId) {
+        try {
+          const dRes: any = await request.get(`/api/v1/order/${order.orderId}`)
+          activeFlyingOrder.value.applyId = dRes?.applyId || dRes?.flightApplyDetail?.applyId
+          if (dRes?.flightApplyDetail) {
+            activeFlyingOrder.value.applySn = dRes.flightApplyDetail.applySn
+            activeFlyingOrder.value.pilotName = dRes.pilotName || '张志强'
+            activeFlyingOrder.value.uavSn = dRes.uavSn || 'UAV-FY90-001'
+          }
+        } catch (e) {}
       }
+      startSampling()
     } else {
       activeFlyingOrder.value = null
       stopSampling()
@@ -516,8 +524,8 @@ const handleLogout = async () => {
   }, 400)
 }
 
-onShow(() => {
-  fetchUser()
+onShow(async () => {
+  await fetchUser()
   fetchUavs()
   fetchMaintains()
   fetchFlyingOrder()
@@ -543,6 +551,21 @@ onHide(() => {
   align-items: center;
   margin-bottom: 8px;
 }
+.fly-info-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.meta-tag {
+  font-size: 11px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
 .badge-row {
   display: flex;
   align-items: center;

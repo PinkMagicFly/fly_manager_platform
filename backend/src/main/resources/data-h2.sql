@@ -78,8 +78,8 @@ INSERT INTO fence_rule (rule_id, rule_name, buffer_distance, max_altitude, actio
 
 -- 样例申报单 (flight_apply)
 INSERT INTO flight_apply (apply_id, apply_sn, order_id, merchant_id, uav_id, pilot_id, route_line, alt_planned, start_at, end_at, check_state, approve_state, approver_id, approve_note, approve_at) VALUES
-(1, 'FA202610170001', 101, 1, 1, 1, 'LINESTRING(113.943 22.540, 114.000 22.545, 114.062 22.553)', 100, '2026-10-17 09:00:00', '2026-10-17 10:30:00', 1, 1, 3, '合规校验通过，航线无空域冲突，批准执行', '2026-10-17 12:00:00'),
-(2, 'FA202610170002', 102, 1, 3, 1, 'LINESTRING(114.218 22.695, 114.240 22.690, 114.265 22.578)', 90, '2026-10-19 14:00:00', '2026-10-19 15:30:00', 1, 0, NULL, NULL, NULL);
+(1, 'FA202610170001', 3, 1, 1, 1, 'LINESTRING(113.943 22.540, 114.000 22.545, 114.062 22.553)', 100, DATEADD('HOUR', -1, CURRENT_TIMESTAMP), DATEADD('HOUR', 1, CURRENT_TIMESTAMP), 1, 4, 3, '合规审批通过，机长已确认起飞进入在途执行中', DATEADD('MINUTE', -30, CURRENT_TIMESTAMP)),
+(2, 'FA202610170000', 4, 1, 2, 1, 'LINESTRING(114.218 22.695, 114.240 22.690, 114.265 22.578)', 90, DATEADD('HOUR', -3, CURRENT_TIMESTAMP), DATEADD('HOUR', -1, CURRENT_TIMESTAMP), 1, 5, 3, '飞行任务已圆满完成送达', DATEADD('HOUR', -3, CURRENT_TIMESTAMP));
 
 -- 样例违规案件 (violation_case)
 INSERT INTO violation_case (case_id, case_sn, apply_id, violate_kind, level, punish_state, evidence, handled_by, handled_at) VALUES
@@ -94,7 +94,7 @@ INSERT INTO cargo_order (order_id, order_sn, customer_id, merchant_id, sender_ad
 (1, 'ORD202610170001', 1, 1, '南山科技园低空枢纽（深圳湾）', '深圳大学总医院急诊楼起降坪', 'POINT(113.952 22.532)', 'POINT(113.987 22.592)', 2, 5.50, 1, 45.00, 25.00, 21.00, 3.00, 88.00, 1, 1, 20, NULL, NULL, DATEADD('HOUR', 2, CURRENT_TIMESTAMP)),
 (2, 'ORD202610170002', 1, 1, '南山科技园枢纽站A区', '福田CBD深业上城楼顶起降场', 'POINT(113.943 22.540)', 'POINT(114.062 22.553)', 3, 12.00, 0, 42.00, 28.50, 0.00, 5.00, 65.50, 1, 1, 30, NULL, NULL, DATEADD('HOUR', 3, CURRENT_TIMESTAMP)),
 (3, 'ORD202610170003', 1, 1, '南山科技园枢纽站B区', '福田CBD深业上城楼顶起降场', 'POINT(113.943 22.540)', 'POINT(114.062 22.553)', 4, 8.00, 1, 55.00, 30.00, 25.00, 0.00, 110.00, 1, 1, 50, 1, 1, DATEADD('MINUTE', 30, CURRENT_TIMESTAMP)),
-(4, 'ORD202610170004', 1, 1, '龙岗大运智慧物流场站', '盐田港综合保税区中转站', 'POINT(114.218 22.695)', 'POINT(114.265 22.578)', 1, 1.50, 0, 25.00, 15.00, 0.00, 5.00, 35.00, 1, 1, 60, 2, NULL, DATEADD('HOUR', -1, CURRENT_TIMESTAMP));
+(4, 'ORD202610170004', 1, 1, '龙岗大运智慧物流场站', '盐田港综合保税区中转站', 'POINT(114.218 22.695)', 'POINT(114.265 22.578)', 1, 1.50, 0, 25.00, 15.00, 0.00, 5.00, 35.00, 1, 1, 60, 2, 2, DATEADD('HOUR', -1, CURRENT_TIMESTAMP));
 
 -- 订单状态流水表 (order_state_flow)
 INSERT INTO order_state_flow (flow_id, order_id, from_state, to_state, operator_id, remark) VALUES
@@ -114,4 +114,14 @@ INSERT INTO order_state_flow (flow_id, order_id, from_state, to_state, operator_
 -- 结算账单表 (settle_bill)
 INSERT INTO settle_bill (bill_id, bill_sn, order_id, merchant_id, amount, bill_state, invoice_flag, settle_at) VALUES
 (1, 'BILL202610170001', 4, 1, 35.00, 1, 0, CURRENT_TIMESTAMP);
+
+-- 飞行航迹明细 (fly_trace)
+INSERT INTO fly_trace (trace_id, apply_id, uav_id, point_geo, altitude, speed, battery_remain, report_time, created_at) VALUES
+(1, 1, 1, 'POINT(113.943000 22.540000)', 100.00, 12.50, 95, DATEADD('MINUTE', -15, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP),
+(2, 1, 1, 'POINT(113.955000 22.541000)', 102.00, 12.80, 94, DATEADD('MINUTE', -12, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP),
+(3, 1, 1, 'POINT(113.970000 22.542500)', 101.50, 13.00, 93, DATEADD('MINUTE', -9, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP),
+(4, 1, 1, 'POINT(113.985000 22.543800)', 100.00, 12.60, 92, DATEADD('MINUTE', -6, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP),
+(5, 1, 1, 'POINT(114.000000 22.545000)', 103.00, 12.40, 91, DATEADD('MINUTE', -3, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP),
+(6, 1, 1, 'POINT(114.015000 22.546500)', 102.00, 12.50, 90, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
 
