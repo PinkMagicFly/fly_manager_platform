@@ -39,14 +39,15 @@
           <el-menu-item index="/admin/audit-logs">操作审计日志</el-menu-item>
         </el-sub-menu>
 
-        <!-- 2. 商户/管理员专属：企业子账号组织管理 -->
-        <el-sub-menu index="merchant" v-if="isMerchant || isAdmin">
+        <!-- 2. 商户/管理员专属：企业子账号组织管理 (调度员无此权限) -->
+        <el-sub-menu index="merchant" v-if="(isMerchant && !isDispatcher) || isAdmin">
           <template #title>
             <el-icon><OfficeBuilding /></el-icon>
             <span>企业组织管理</span>
           </template>
           <el-menu-item index="/merchant/sub-accounts">子账户与权限设置</el-menu-item>
         </el-sub-menu>
+
 
         <!-- 3. 机队资产中心 (商户/运维/管理员可见) -->
         <el-sub-menu index="asset" v-if="isMerchant || isAdmin || isAtc">
@@ -88,8 +89,9 @@
           </template>
           <el-menu-item index="/order/board">订单综合看板</el-menu-item>
           <el-menu-item index="/order/dispatch">智能调度工作台</el-menu-item>
-          <el-menu-item index="/order/bills">结算与账单中心</el-menu-item>
+          <el-menu-item index="/order/bills" v-if="!isDispatcher">结算与账单中心</el-menu-item>
         </el-sub-menu>
+
 
       </el-menu>
     </el-aside>
@@ -153,17 +155,20 @@ const activePath = computed(() => route.path)
 const currentRouteTitle = computed(() => (route.meta.title as string) || '工作台')
 
 const isAdmin = computed(() => userStore.userInfo?.roles.includes('ROLE_ADMIN'))
-const isMerchant = computed(() => userStore.userInfo?.roles.includes('ROLE_MERCHANT') || userStore.userInfo?.accountKind === 2)
+const isMerchant = computed(() => userStore.userInfo?.roles.includes('ROLE_MERCHANT') || userStore.userInfo?.roles.includes('ROLE_DISPATCHER') || userStore.userInfo?.accountKind === 2)
+const isDispatcher = computed(() => userStore.userInfo?.roles.includes('ROLE_DISPATCHER'))
 const isAtc = computed(() => userStore.userInfo?.roles.includes('ROLE_ATC') || userStore.userInfo?.accountKind === 4)
 const isPilot = computed(() => userStore.userInfo?.roles.includes('ROLE_PILOT') || userStore.userInfo?.accountKind === 5)
 
 const roleText = computed(() => {
   if (userStore.userInfo?.roles.includes('ROLE_ADMIN')) return isMobile.value ? '超管' : '平台超级管理员'
+  if (userStore.userInfo?.roles.includes('ROLE_DISPATCHER')) return isMobile.value ? '调度员' : '商户调度员'
   if (userStore.userInfo?.roles.includes('ROLE_MERCHANT')) return isMobile.value ? '商户' : '低空物流商户'
   if (userStore.userInfo?.roles.includes('ROLE_ATC')) return isMobile.value ? '空管' : '空管监察员'
   if (userStore.userInfo?.roles.includes('ROLE_PILOT')) return isMobile.value ? '机长' : '商用飞手机长'
   return '系统用户'
 })
+
 
 const roleTagType = computed(() => {
   if (isAdmin.value) return 'danger'

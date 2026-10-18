@@ -54,6 +54,10 @@ public class CargoOrderServiceImpl implements CargoOrderService {
     private final SmartDispatchRecommendService smartDispatchRecommendService;
     private final CargoOrderStateMachine stateMachine;
     private final FlightApplyStateMachine flightApplyStateMachine;
+    private final com.fly.platform.asset.service.SiteSnapService siteSnapService;
+    private final com.fly.platform.airspace.mapper.AirspaceBlockMapper airspaceBlockMapper;
+    private final com.fly.platform.airspace.domain.AirspaceCollisionEngine collisionEngine;
+
 
     @Override
     public FeeCalculateVO calculateFee(FeeCalculateDTO dto) {
@@ -185,9 +189,39 @@ public class CargoOrderServiceImpl implements CargoOrderService {
 
         LocalDateTime startAt = dto.getStartAt() != null ? dto.getStartAt() : LocalDateTime.now().plusMinutes(15);
         LocalDateTime endAt = dto.getEndAt() != null ? dto.getEndAt() : LocalDateTime.now().plusMinutes(45);
-        String routeLine = String.format("LINESTRING(%.6f %.6f, %.6f %.6f)",
-                order.getSenderLng(), order.getSenderLat(), order.getReceiverLng(), order.getReceiverLat());
         int altPlanned = dto.getAltPlanned() != null ? dto.getAltPlanned() : 100;
+
+        String routeLine = dto.getRouteLine();
+        if (routeLine == null || routeLine.trim().isEmpty()) {
+            throw new BusinessException(400, "规划航线折线坐标序列不能为空");
+        }
+
+        // 校验链 1：寄件/收件坐标吸附起飞场站A与降落场站B
+        com.fly.platform.asset.entity.BaseSite siteA = siteSnapService.snapSite(order.getSenderLng(), order.getSenderLat());
+        com.fly.platform.asset.entity.BaseSite siteB = siteSnapService.snapSite(order.getReceiverLng(), order.getReceiverLat());
+
+        // 校验链 2：解析 routeLine 首末点，与两场站坐标距离 ≤ 50 米（防端点脱离场站）
+        List<List<Double>> routePoints = com.fly.platform.common.util.GeoUtils.parseWktLineString(routeLine);
+        if (routePoints == null || routePoints.size() < 2) {
+            throw new BusinessException(400, "规划航线折线坐标点数不足，至少包含起降2个场站点");
+        }
+        List<Double> startPoint = routePoints.get(0);
+        List<Double> endPoint = routePoints.get(routePoints.size() - 1);
+        double distStart = com.fly.platform.common.util.GeoUtils.haversineMeters(startPoint.get(0), startPoint.get(1), siteA.getLongitude(), siteA.getLatitude());
+        if (distStart > 50.0) {
+            throw new BusinessException(400, String.format("航线起点偏离起飞场站[%s]超过50米 (当前偏离: %.1f米)", siteA.getSiteName(), distStart));
+        }
+        double distEnd = com.fly.platform.common.util.GeoUtils.haversineMeters(endPoint.get(0), endPoint.get(1), siteB.getLongitude(), siteB.getLatitude());
+        if (distEnd > 50.0) {
+            throw new BusinessException(400, String.format("航线终点偏离降落场站[%s]超过50米 (当前偏离: %.1f米)", siteB.getSiteName(), distEnd));
+        }
+
+        // 校验链 3：调 AirspaceCollisionEngine 对整条折线做禁飞/限高/时段校验
+        List<com.fly.platform.airspace.entity.AirspaceBlock> allBlocks = airspaceBlockMapper.selectAllActiveBlocks();
+        com.fly.platform.airspace.vo.AirspaceValidateResultVO validateResult = collisionEngine.validateRoute(routePoints, altPlanned, startAt, endAt, allBlocks);
+        if (!Boolean.TRUE.equals(validateResult.getPass())) {
+            throw new BusinessException(400, "航线空域合规校验未通过: " + validateResult.getMessage());
+        }
 
         String applySn = "FA" + DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now())
                 + (int) (Math.random() * 9000 + 1000);
@@ -478,6 +512,7 @@ public class CargoOrderServiceImpl implements CargoOrderService {
             if (apply != null) {
                 vo.setApplySn(apply.getApplySn());
                 vo.setApplyApproveState(apply.getApproveState());
+                vo.setRoutePoints(apply.parseRoutePoints());
                 if (apply.getPilotId() != null) {
                     CrewStaff pilot = crewStaffMapper.selectById(apply.getPilotId());
                     if (pilot != null) {

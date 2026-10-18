@@ -8,20 +8,62 @@
 
     <view class="form-scroll">
       <view class="card-box">
-        <view class="card-title">起止场站航道</view>
-        <view class="addr-row">
-          <text class="badge bg-green">起</text>
-          <input v-model="form.senderAddr" class="input-text" placeholder="寄件地址" />
+        <view class="card-title">起止服务地址 (美团结构化地址)</view>
+        
+        <!-- 寄件端结构化输入 -->
+        <view class="addr-block">
+          <view class="addr-header">
+            <text class="badge bg-green">起</text>
+            <text class="addr-label">寄件投递点</text>
+          </view>
+          <view class="region-selector-row">
+            <RegionCascader
+              v-model="senderRegionText"
+              placeholder="请选择寄件省/市/区/街道"
+              @change="onSenderRegionChange"
+            />
+          </view>
+          <input
+            v-model="senderDetail"
+            class="detail-input"
+            placeholder="详细地址 (如: 科技南十二路28号康佳研发大厦A座)"
+            @blur="updateSenderCombined"
+          />
+          <view class="geo-coord-tag">
+            <text>选点坐标: {{ form.senderLng.toFixed(6) }}, {{ form.senderLat.toFixed(6) }}</text>
+          </view>
         </view>
-        <view class="addr-row" style="margin-top: 10px">
-          <text class="badge bg-orange">止</text>
-          <input v-model="form.receiverAddr" class="input-text" placeholder="收件地址" />
+
+        <!-- 收件端结构化输入 -->
+        <view class="addr-block" style="margin-top: 14px">
+          <view class="addr-header">
+            <text class="badge bg-orange">止</text>
+            <text class="addr-label">收件目的地</text>
+          </view>
+          <view class="region-selector-row">
+            <RegionCascader
+              v-model="receiverRegionText"
+              placeholder="请选择收件省/市/区/街道"
+              @change="onReceiverRegionChange"
+            />
+          </view>
+          <input
+            v-model="receiverDetail"
+            class="detail-input"
+            placeholder="详细地址 (如: 皇岗路5001号深业上城南区B座顶楼)"
+            @blur="updateReceiverCombined"
+          />
+          <view class="geo-coord-tag">
+            <text>选点坐标: {{ form.receiverLng.toFixed(6) }}, {{ form.receiverLat.toFixed(6) }}</text>
+          </view>
         </view>
+
         <view class="preset-links">
-          <text class="link-item" @click="usePreset(1)">南山枢纽 → 福田深业</text>
-          <text class="link-item" @click="usePreset(2)">龙岗大运 → 盐田保税</text>
+          <text class="link-item" @click="usePreset(1)">一键填入: 南山科技园 → 福田深业</text>
+          <text class="link-item" @click="usePreset(2)">一键填入: 龙岗大运 → 盐田保税</text>
         </view>
       </view>
+
 
       <view class="card-box">
         <view class="card-title">货物类别与重量</view>
@@ -73,9 +115,15 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import request from '../../utils/request'
+import RegionCascader from '../../components/RegionCascader.vue'
 
 const submitting = ref(false)
 const feeResult = ref<any>(null)
+
+const senderRegionText = ref('广东省深圳市南山区粤海街道')
+const senderDetail = ref('科技南十二路28号康佳研发大厦A座')
+const receiverRegionText = ref('广东省深圳市福田区莲花街道')
+const receiverDetail = ref('皇岗路5001号深业上城南区B座顶楼')
 
 const goodsTypes = [
   { val: 1, label: '普通文件' },
@@ -85,34 +133,66 @@ const goodsTypes = [
 ]
 
 const form = reactive({
-  senderAddr: '南山科技园低空综合起降枢纽',
-  senderLng: 113.943,
-  senderLat: 22.540,
-  receiverAddr: '福田CBD深业上城楼顶起降场',
-  receiverLng: 114.062,
-  receiverLat: 22.553,
+  senderAddr: '广东省深圳市南山区粤海街道科技南十二路28号康佳研发大厦A座',
+  senderLng: 113.943000,
+  senderLat: 22.540000,
+  receiverAddr: '广东省深圳市福田区莲花街道皇岗路5001号深业上城南区B座顶楼',
+  receiverLng: 114.062000,
+  receiverLat: 22.553000,
   goodsType: 3,
   goodsWeight: '8.5',
   urgentFlag: 0,
   payWay: 1
 })
 
+const onSenderRegionChange = (data: any) => {
+  senderRegionText.value = data.fullRegion
+  form.senderLng = data.lng
+  form.senderLat = data.lat
+  updateSenderCombined()
+  triggerFeeCalc()
+}
+
+const onReceiverRegionChange = (data: any) => {
+  receiverRegionText.value = data.fullRegion
+  form.receiverLng = data.lng
+  form.receiverLat = data.lat
+  updateReceiverCombined()
+  triggerFeeCalc()
+}
+
+const updateSenderCombined = () => {
+  form.senderAddr = `${senderRegionText.value || ''}${senderDetail.value || ''}`
+}
+
+const updateReceiverCombined = () => {
+  form.receiverAddr = `${receiverRegionText.value || ''}${receiverDetail.value || ''}`
+}
+
 const usePreset = (type: number) => {
   if (type === 1) {
-    form.senderAddr = '南山科技园低空综合起降枢纽'
-    form.senderLng = 113.943
-    form.senderLat = 22.540
-    form.receiverAddr = '福田CBD深业上城楼顶起降场'
-    form.receiverLng = 114.062
-    form.receiverLat = 22.553
+    senderRegionText.value = '广东省深圳市南山区粤海街道'
+    senderDetail.value = '科技南十二路28号康佳研发大厦A座'
+    form.senderLng = 113.943000
+    form.senderLat = 22.540000
+
+    receiverRegionText.value = '广东省深圳市福田区莲花街道'
+    receiverDetail.value = '皇岗路5001号深业上城南区B座顶楼'
+    form.receiverLng = 114.062000
+    form.receiverLat = 22.553000
   } else {
-    form.senderAddr = '龙岗大运智慧物流换电场站'
-    form.senderLng = 114.218
-    form.senderLat = 22.695
-    form.receiverAddr = '盐田港综合保税区中转场站'
-    form.receiverLng = 114.265
-    form.receiverLat = 22.578
+    senderRegionText.value = '广东省深圳市龙岗区大运街道'
+    senderDetail.value = '龙飞大道333号大运智能换电站'
+    form.senderLng = 114.218000
+    form.senderLat = 22.695000
+
+    receiverRegionText.value = '广东省深圳市盐田区盐田街道'
+    receiverDetail.value = '深盐路综合保税区保税大厦'
+    form.receiverLng = 114.265000
+    form.receiverLat = 22.578000
   }
+  updateSenderCombined()
+  updateReceiverCombined()
   triggerFeeCalc()
 }
 
@@ -140,8 +220,21 @@ const handleCreateAndPay = async () => {
   if (!form.goodsWeight || Number(form.goodsWeight) <= 0) {
     return uni.showToast({ title: '请输入合法重量', icon: 'none' })
   }
+  updateSenderCombined()
+  updateReceiverCombined()
+
   submitting.value = true
   try {
+    // 提交前吸附预检（失败提示但不阻断）
+    try {
+      await Promise.all([
+        request.get(`/api/v1/site/snap?lng=${form.senderLng}&lat=${form.senderLat}`),
+        request.get(`/api/v1/site/snap?lng=${form.receiverLng}&lat=${form.receiverLat}`)
+      ])
+    } catch (e: any) {
+      uni.showToast({ title: '提示: 地址落点较远，将由调度中枢二次吸附核验', icon: 'none' })
+    }
+
     const created: any = await request.post('/api/v1/order/create', {
       senderAddr: form.senderAddr,
       senderLng: form.senderLng,
@@ -171,8 +264,13 @@ const handleCreateAndPay = async () => {
 
 const goBack = () => { uni.navigateBack() }
 
-onMounted(() => { triggerFeeCalc() })
+onMounted(() => {
+  updateSenderCombined()
+  updateReceiverCombined()
+  triggerFeeCalc()
+})
 </script>
+
 
 <style scoped>
 .m-order-create-container { display: flex; flex-direction: column; height: 100vh; background: #f1f5f9; }
@@ -182,6 +280,13 @@ onMounted(() => { triggerFeeCalc() })
 .form-scroll { flex: 1; padding: 12px; overflow-y: auto; }
 .card-box { background: #fff; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
 .card-title { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 10px; }
+.addr-block { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; }
+.addr-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.addr-label { font-size: 13px; font-weight: 700; color: #0f172a; }
+.region-selector-row { margin-bottom: 8px; }
+.detail-input { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; font-size: 13px; color: #0f172a; }
+.geo-coord-tag { margin-top: 6px; font-size: 11px; color: #64748b; font-family: monospace; }
+
 .addr-row { display: flex; align-items: center; gap: 8px; }
 .badge { font-size: 11px; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
 .bg-green { background: #10b981; }

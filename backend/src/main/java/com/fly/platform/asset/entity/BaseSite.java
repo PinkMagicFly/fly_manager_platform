@@ -41,6 +41,14 @@ public class BaseSite extends BaseEntity {
     /** 场站运行状态：1-正常运营 2-临时停运 3-设备维护 */
     private Integer siteState;
 
+    /** 场站基准服务覆盖半径（米，默认 5000 米） */
+    public static final double DEFAULT_SERVICE_RADIUS_METERS = 5000.0;
+
+    /** 获取场站服务覆盖半径（米） */
+    public Double getServiceRadius() {
+        return DEFAULT_SERVICE_RADIUS_METERS;
+    }
+
     /** 获取经度 */
     public Double getLongitude() {
         if (siteGeo != null && !siteGeo.isEmpty()) {

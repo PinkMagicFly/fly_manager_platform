@@ -19,20 +19,31 @@
         </view>
       </view>
 
-      <!-- 寄收航道 -->
+      <!-- 寄收航道与折线可视化 -->
       <view class="card-box">
-        <view class="card-title">起止场站航线</view>
+        <view class="card-title">起止场站与飞行折线</view>
         <view class="addr-item">
           <text class="dot bg-green">起</text>
           <view class="info">
             <text class="addr">{{ detail?.senderAddr }}</text>
           </view>
         </view>
-        <view class="addr-item" style="margin-top: 10px">
+        <view class="addr-item" style="margin-top: 8px">
           <text class="dot bg-orange">止</text>
           <view class="info">
             <text class="addr">{{ detail?.receiverAddr }}</text>
           </view>
+        </view>
+        <view v-if="mapPolyline.length > 0" class="map-wrap" style="margin-top: 10px">
+          <map
+            id="order-detail-map"
+            class="detail-map"
+            :latitude="mapCenter.latitude"
+            :longitude="mapCenter.longitude"
+            :markers="mapMarkers"
+            :polyline="mapPolyline"
+            :scale="12"
+          />
         </view>
       </view>
 
@@ -78,11 +89,45 @@ import { onLoad } from '@dcloudio/uni-app'
 import request from '../../utils/request'
 
 const detail = ref<any>(null)
+const mapCenter = ref({ latitude: 22.540, longitude: 114.000 })
+const mapMarkers = ref<any[]>([])
+const mapPolyline = ref<any[]>([])
+
+const setupRouteMap = () => {
+  if (!detail.value) return
+  let pts: any[] = []
+  if (detail.value.routePoints && detail.value.routePoints.length >= 2) {
+    pts = detail.value.routePoints.map((p: number[]) => ({ latitude: p[1], longitude: p[0] }))
+  } else if (detail.value.senderLat && detail.value.receiverLat) {
+    pts = [
+      { latitude: detail.value.senderLat, longitude: detail.value.senderLng },
+      { latitude: detail.value.receiverLat, longitude: detail.value.receiverLng }
+    ]
+  }
+
+  if (pts.length >= 2) {
+    mapCenter.value = {
+      latitude: (pts[0].latitude + pts[pts.length - 1].latitude) / 2,
+      longitude: (pts[0].longitude + pts[pts.length - 1].longitude) / 2
+    }
+    mapMarkers.value = [
+      { id: 1, latitude: pts[0].latitude, longitude: pts[0].longitude, title: '起飞场站', width: 24, height: 24 },
+      { id: 2, latitude: pts[pts.length - 1].latitude, longitude: pts[pts.length - 1].longitude, title: '降落场站', width: 24, height: 24 }
+    ]
+    mapPolyline.value = [{
+      points: pts,
+      color: '#0284c7',
+      width: 4,
+      arrowLine: true
+    }]
+  }
+}
 
 const loadDetail = async (orderId: string) => {
   try {
     const res: any = await request.get(`/api/v1/order/${orderId}`)
     detail.value = res
+    setupRouteMap()
   } catch (err: any) {
     uni.showToast({ title: '加载订单详情失败', icon: 'none' })
   }
@@ -103,6 +148,9 @@ onLoad((options: any) => {
 .back-btn { font-size: 15px; font-weight: 500; }
 .page-title { font-size: 16px; font-weight: bold; }
 .detail-scroll { flex: 1; padding: 12px; overflow-y: auto; }
+.map-wrap { width: 100%; height: 180px; border-radius: 6px; overflow: hidden; background: #e2e8f0; }
+.detail-map { width: 100%; height: 100%; }
+
 .status-banner { display: flex; justify-content: space-between; align-items: center; background: #0284c7; color: #fff; padding: 14px; border-radius: 8px; margin-bottom: 10px; }
 .status-txt { font-size: 18px; font-weight: 800; display: block; }
 .sn { font-size: 12px; opacity: 0.85; margin-top: 2px; display: block; }

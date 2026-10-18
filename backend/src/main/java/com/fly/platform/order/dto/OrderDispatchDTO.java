@@ -36,4 +36,8 @@ public class OrderDispatchDTO {
     /** 预计降落时间 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime endAt;
+
+    /** 规划航线折线坐标序列 WKT (LINESTRING(lng lat, lng lat, ...)) */
+    @jakarta.validation.constraints.NotBlank(message = "规划航线折线坐标序列不能为空")
+    private String routeLine;
 }

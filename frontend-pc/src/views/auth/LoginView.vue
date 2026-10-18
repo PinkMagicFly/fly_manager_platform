@@ -11,8 +11,8 @@
         <span class="quick-label">演示账号：</span>
         <el-button size="small" type="primary" plain @click="fillQuick('admin')">管理员</el-button>
         <el-button size="small" type="success" plain @click="fillQuick('merchant_sf')">商户(顺丰)</el-button>
+        <el-button size="small" type="primary" plain @click="fillQuick('dispatcher_sf')">调度员·顺丰</el-button>
         <el-button size="small" type="warning" plain @click="fillQuick('atc_officer')">空管员</el-button>
-        <el-button size="small" type="info" plain @click="fillQuick('pilot_zhang')">机长</el-button>
       </div>
 
       <el-tabs v-model="loginMode">

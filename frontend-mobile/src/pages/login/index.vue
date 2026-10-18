@@ -9,10 +9,10 @@
     <!-- 快速切换 -->
     <view class="quick-bar">
       <text class="quick-label">快捷切换：</text>
-      <button class="mini-btn" @click="fill('pilot_zhang')">机长</button>
-      <button class="mini-btn" @click="fill('maintain_li')">运维</button>
       <button class="mini-btn" @click="fill('customer_demo')">客户</button>
+      <button class="mini-btn" @click="fill('pilot_sf')">机长</button>
     </view>
+
 
     <view class="form-box">
       <view class="input-item">
@@ -36,8 +36,9 @@
 import { ref } from 'vue'
 import request from '../../utils/request'
 
-const username = ref('pilot_zhang')
+const username = ref('pilot_sf')
 const password = ref('123456')
+
 const loading = ref(false)
 
 const fill = (u: string) => {

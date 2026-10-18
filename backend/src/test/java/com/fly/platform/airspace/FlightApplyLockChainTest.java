@@ -104,6 +104,8 @@ public class FlightApplyLockChainTest {
         dispatchDTO1.setStartAt(start1);
         dispatchDTO1.setEndAt(end1);
         dispatchDTO1.setAltPlanned(100);
+        // 5A.1：提交多点折线（3个航路点）
+        dispatchDTO1.setRouteLine("LINESTRING(113.943000 22.540000, 114.000000 22.545000, 114.062000 22.553000)");
 
         CargoOrder dispatchedOrder1 = cargoOrderService.dispatchOrder(dispatchDTO1, merchantId);
 
@@ -111,10 +113,11 @@ public class FlightApplyLockChainTest {
         assertThat(dispatchedOrder1.getOrderState()).isEqualTo(OrderStateEnum.PENDING_DISPATCH.getCode());
         assertThat(dispatchedOrder1.getApplyId()).isNotNull();
 
-        // 断言：任务已生成但处于 0-待审批
+        // 断言：任务已生成但处于 0-待审批，且入库折线航路点数 ≥ 3
         FlightApply apply1 = flightApplyMapper.selectApplyById(dispatchedOrder1.getApplyId());
         assertThat(apply1).isNotNull();
         assertThat(apply1.getApproveState()).isEqualTo(FlightApplyStateEnum.PENDING.getCode());
+        assertThat(apply1.parseRoutePoints()).hasSizeGreaterThanOrEqualTo(3);
 
         // 断言：无人机资产未被锁定（仍为闲置 0）
         UavInfo uav1 = uavInfoMapper.selectById(uavId);
@@ -159,6 +162,7 @@ public class FlightApplyLockChainTest {
         dispatchDTO2.setStartAt(start1.plusMinutes(30)); // 时段重叠
         dispatchDTO2.setEndAt(end1.plusMinutes(30));
         dispatchDTO2.setAltPlanned(100);
+        dispatchDTO2.setRouteLine("LINESTRING(113.943000 22.540000, 114.000000 22.545000, 114.062000 22.553000)");
 
         CargoOrder dispatchedOrder2 = cargoOrderService.dispatchOrder(dispatchDTO2, merchantId);
         assertThat(dispatchedOrder2.getOrderState()).isEqualTo(OrderStateEnum.PENDING_DISPATCH.getCode());
@@ -200,7 +204,7 @@ public class FlightApplyLockChainTest {
         FlightApply rejectedApply = flightApplyMapper.selectApplyById(apply2Id);
         assertThat(rejectedApply.getApproveState()).isEqualTo(FlightApplyStateEnum.REJECTED.getCode());
 
-        // 驳回重报：修改起降时间至不冲突的未来时段，再次提交
+        // 驳回重报：修改起降时间至不冲突的未来时段，并调整更新航线，再次提交
         OrderDispatchDTO redispatchDTO = new OrderDispatchDTO();
         redispatchDTO.setOrderId(order2Id);
         redispatchDTO.setUavId(uavId);
@@ -208,9 +212,15 @@ public class FlightApplyLockChainTest {
         redispatchDTO.setStartAt(end1.plusHours(1)); // 不再冲突
         redispatchDTO.setEndAt(end1.plusHours(2));
         redispatchDTO.setAltPlanned(90);
+        String updatedRoute = "LINESTRING(113.943000 22.540000, 114.020000 22.550000, 114.062000 22.553000)";
+        redispatchDTO.setRouteLine(updatedRoute);
 
         CargoOrder redispatchedOrder2 = cargoOrderService.dispatchOrder(redispatchDTO, merchantId);
         assertThat(redispatchedOrder2.getOrderState()).isEqualTo(OrderStateEnum.PENDING_DISPATCH.getCode());
+
+        // 断言驳回重报后折线更新
+        FlightApply recheckApply = flightApplyMapper.selectApplyById(redispatchedOrder2.getApplyId());
+        assertThat(recheckApply.getRouteLine()).contains("114.020000");
 
         // 重新批准任务2成功
         FlightApproveDTO approveDTO2 = new FlightApproveDTO();
@@ -231,6 +241,7 @@ public class FlightApplyLockChainTest {
         pendingDTO.setOrderId(unapprovedOrder.getOrderId());
         pendingDTO.setUavId(3L);
         pendingDTO.setPilotId(pilotId);
+        pendingDTO.setRouteLine("LINESTRING(113.943000 22.540000, 114.000000 22.545000, 114.062000 22.553000)");
         cargoOrderService.dispatchOrder(pendingDTO, merchantId);
 
         // 未经审批直接强行起飞，断言被起飞守卫阻断
@@ -255,6 +266,7 @@ public class FlightApplyLockChainTest {
         duplicateDTO.setOrderId(order1Id);
         duplicateDTO.setUavId(uavId);
         duplicateDTO.setPilotId(pilotId);
+        duplicateDTO.setRouteLine("LINESTRING(113.943000 22.540000, 114.000000 22.545000, 114.062000 22.553000)");
 
         assertThatThrownBy(() -> cargoOrderService.dispatchOrder(duplicateDTO, merchantId))
                 .isInstanceOf(BusinessException.class);

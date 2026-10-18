@@ -26,6 +26,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -122,6 +124,9 @@ public class OrderFeatureChainTest {
         dispatchDTO.setUavId(candidateUav.getUavId());
         dispatchDTO.setPilotId(pilotId);
         dispatchDTO.setAltPlanned(110);
+        dispatchDTO.setStartAt(LocalDateTime.now().plusDays(2).withHour(10).withMinute(0));
+        dispatchDTO.setEndAt(LocalDateTime.now().plusDays(2).withHour(11).withMinute(30));
+        dispatchDTO.setRouteLine("LINESTRING(113.943000 22.540000, 114.000000 22.545000, 114.062000 22.553000)");
 
         // 阶段5A新时序：提交飞行任务审批，不锁资源，订单停留 30 待调度
         CargoOrder dispatchedOrder = cargoOrderService.dispatchOrder(dispatchDTO, merchantId);

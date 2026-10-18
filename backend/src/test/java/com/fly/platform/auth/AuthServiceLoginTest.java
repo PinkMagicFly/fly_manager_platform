@@ -11,11 +11,17 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.ActiveProfiles;
+
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -74,4 +80,52 @@ public class AuthServiceLoginTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("审核中");
     }
+
+    @Test
+    @DisplayName("机长角色携带 Client-Kind: pc 登录，断言 403 业务拦截并提示使用移动端")
+    public void testPilotPcLoginForbidden() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        request.addHeader("Client-Kind", "pc");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request, response));
+
+        try {
+            LoginRequestDTO req = new LoginRequestDTO();
+            req.setUsername("pilot_sf");
+            req.setPassword("123456");
+            req.setLoginType("password");
+
+            assertThatThrownBy(() -> authService.login(req, "127.0.0.1"))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("机长请使用移动端 App 登录");
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
+    }
+
+    @Test
+    @DisplayName("机长角色携带 Client-Kind: app 登录，断言鉴权成功并正常发放 Token")
+    public void testPilotAppLoginSuccess() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        request.addHeader("Client-Kind", "app");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request, response));
+
+        try {
+            LoginRequestDTO req = new LoginRequestDTO();
+            req.setUsername("pilot_sf");
+            req.setPassword("123456");
+            req.setLoginType("password");
+
+            LoginResponseDTO res = authService.login(req, "127.0.0.1");
+            assertThat(res).isNotNull();
+            assertThat(res.getToken()).isNotBlank();
+            assertThat(res.getLoginName()).isEqualTo("pilot_sf");
+            assertThat(res.getRoles()).contains("ROLE_PILOT");
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
+    }
 }
+
+

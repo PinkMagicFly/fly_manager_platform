@@ -27,6 +27,21 @@ export function validateAirspaceRoute(data: {
   })
 }
 
+export function planAirspaceRoute(data: {
+  startLng: number
+  startLat: number
+  endLng: number
+  endLat: number
+  altPlanned?: number
+}): Promise<any> {
+  return request({
+    url: '/api/v1/airspace/plan-route',
+    method: 'post',
+    data
+  })
+}
+
+
 export function saveAirspaceBlock(data: any): Promise<any> {
   return request({
     url: '/api/v1/airspace/blocks/save',

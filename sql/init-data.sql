@@ -19,7 +19,8 @@ role_name, description) VALUES
 (3, 'ROLE_ATC', '空管监察员', '空域合规监管部门，拥有飞行计划审批、空域动态管制与违规执法权限'),
 (4, 'ROLE_PILOT', '无人机商用机长', '外场无人机执飞机长，拥有移动端起飞确认、在途状态上报与故障填报权限'),
 (5, 'ROLE_MAINTAINER', '场站运维专员', '负责无人机巡检维保、智能充电机柜维护与场站预约确认'),
-(6, 'ROLE_CUSTOMER', '货运个人/企业客户', '拥有在线下单试算、电子支付、轨迹实时查看与送达签收权限');
+(6, 'ROLE_CUSTOMER', '货运个人/企业客户', '拥有在线下单试算、电子支付、轨迹实时查看与送达签收权限'),
+(7, 'ROLE_DISPATCHER', '商户调度员', '负责订单综合看板、接单、调度航线规划与飞行计划申报');
 
 -- 2. 初始化权限定义与角色授权 (uam_role_grant)
 TRUNCATE TABLE uam_role_grant;
@@ -35,7 +36,7 @@ role_id, perm_code, perm_name) VALUES
 (1, 'sys:param:manage', '系统运行参数修改'),
 (1, 'audit:log:view', '全量敏感操作日志审计');
 
--- 商户权限
+-- 商户主账号权限
 INSERT INTO uam_role_grant (
 role_id, perm_code, perm_name) VALUES
 (2, 'subaccount:manage', '商户企业子账号管理'),
@@ -46,6 +47,16 @@ role_id, perm_code, perm_name) VALUES
 (2, 'flight:apply', '航线规划与飞行计划申报'),
 (2, 'site:booking', '起降场站机位占用预约'),
 (2, 'settle:bill:view', '对账单管理与开票申请');
+
+-- 商户调度员权限（无账单与组织权限）
+INSERT INTO uam_role_grant (
+role_id, perm_code, perm_name) VALUES
+(7, 'order:board:view', '商户订单看板与状态流转'),
+(7, 'order:accept', '商户批量或单笔接单'),
+(7, 'order:dispatch', '订单智能调度派单'),
+(7, 'flight:apply', '航线规划与飞行计划申报'),
+(7, 'site:booking', '起降场站机位占用预约');
+
 
 -- 空管权限
 INSERT INTO uam_role_grant (
@@ -76,11 +87,12 @@ INSERT INTO uam_account (account_id, login_name, mobile, email, pwd_digest, acco
 (1, 'admin', '13800000001', 'admin@soarcloud.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 3, 1, NOW(), '127.0.0.1'),
 (2, 'merchant_sf', '13800000002', 'service@sf-air.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1, NOW(), '127.0.0.1'),
 (3, 'atc_officer', '13800000003', 'atc@caac-south.gov.cn', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 4, 1, NOW(), '127.0.0.1'),
-(4, 'pilot_zhang', '13800000004', 'pilot_zhang@sf-air.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 5, 1, NOW(), '127.0.0.1'),
+(4, 'pilot_sf', '13800000004', 'pilot_sf@sf-air.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 5, 1, NOW(), '127.0.0.1'),
 (5, 'maintain_li', '13800000005', 'maintain_li@soarcloud.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 6, 1, NOW(), '127.0.0.1'),
 (6, 'customer_demo', '13800000006', 'customer@tencent.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 1, 1, NOW(), '127.0.0.1'),
 (7, 'merchant_jd_sub', '13800000007', 'dispatch@jd-air.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1, NOW(), '127.0.0.1'),
-(8, 'merchant_pending', '13800000008', 'biz@pending-cargo.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 0, NULL, NULL);
+(8, 'merchant_pending', '13800000008', 'biz@pending-cargo.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 0, NULL, NULL),
+(9, 'dispatcher_sf', '13800000009', 'dispatcher@sf-air.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1, NOW(), '127.0.0.1');
 
 -- 4. 账户-角色多对多关联 (uam_account_role)
 TRUNCATE TABLE uam_account_role;
@@ -89,11 +101,13 @@ role_id) VALUES
 (1, 1), -- admin -> ROLE_ADMIN
 (2, 2), -- merchant_sf -> ROLE_MERCHANT
 (3, 3), -- atc_officer -> ROLE_ATC
-(4, 4), -- pilot_zhang -> ROLE_PILOT
+(4, 4), -- pilot_sf -> ROLE_PILOT
 (5, 5), -- maintain_li -> ROLE_MAINTAINER
 (6, 6), -- customer_demo -> ROLE_CUSTOMER
 (7, 2), -- merchant_jd_sub -> ROLE_MERCHANT
-(8, 2); -- merchant_pending -> ROLE_MERCHANT
+(8, 2), -- merchant_pending -> ROLE_MERCHANT
+(9, 7); -- dispatcher_sf -> ROLE_DISPATCHER
+
 
 -- 5. 初始化商户档案 (merchant_archive)
 TRUNCATE TABLE merchant_archive;

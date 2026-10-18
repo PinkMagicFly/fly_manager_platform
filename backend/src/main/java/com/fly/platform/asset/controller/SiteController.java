@@ -6,8 +6,10 @@ import com.fly.platform.asset.entity.BaseSite;
 import com.fly.platform.asset.entity.SiteBooking;
 import com.fly.platform.asset.service.BaseSiteService;
 import com.fly.platform.asset.service.SiteBookingConflictService;
+import com.fly.platform.asset.service.SiteSnapService;
 import com.fly.platform.asset.vo.BookingCheckResultVO;
 import com.fly.platform.asset.vo.SiteMapVO;
+import com.fly.platform.asset.vo.SiteSnapVO;
 import com.fly.platform.common.api.Result;
 import com.fly.platform.common.audit.Audit;
 import jakarta.validation.Valid;
@@ -28,6 +30,15 @@ public class SiteController {
 
     private final BaseSiteService baseSiteService;
     private final SiteBookingConflictService bookingConflictService;
+    private final SiteSnapService siteSnapService;
+
+    /**
+     * 经纬度就近吸附起降场站（过滤服务半径 ≤ 5000米）
+     */
+    @GetMapping("/snap")
+    public Result<SiteSnapVO> snapSite(@RequestParam("lng") Double lng, @RequestParam("lat") Double lat) {
+        return Result.ok(siteSnapService.snapSiteWithDistance(lng, lat));
+    }
 
     @GetMapping("/map")
     public Result<List<SiteMapVO>> getSiteMap() {

@@ -5,17 +5,19 @@ INSERT INTO uam_role (role_id, role_code, role_name, description) VALUES
 (3, 'ROLE_ATC', '空管监察员', '空域合规监管部门'),
 (4, 'ROLE_PILOT', '无人机商用机长', '外场无人机执飞机长'),
 (5, 'ROLE_MAINTAINER', '场站运维专员', '负责无人机巡检维保'),
-(6, 'ROLE_CUSTOMER', '货运个人/企业客户', '拥有在线下单试算权限');
+(6, 'ROLE_CUSTOMER', '货运个人/企业客户', '拥有在线下单试算权限'),
+(7, 'ROLE_DISPATCHER', '商户调度员', '负责订单调度、航线规划与飞行计划申报');
 
 INSERT INTO uam_account (account_id, login_name, mobile, email, pwd_digest, account_kind, status) VALUES
 (1, 'admin', '13800000001', 'admin@soarcloud.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 3, 1),
 (2, 'merchant_sf', '13800000002', 'service@sf-air.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1),
 (3, 'atc_officer', '13800000003', 'atc@caac-south.gov.cn', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 4, 1),
-(4, 'pilot_zhang', '13800000004', 'pilot_zhang@sf-air.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 5, 1),
+(4, 'pilot_sf', '13800000004', 'pilot_sf@sf-air.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 5, 1),
 (5, 'maintain_li', '13800000005', 'maintain_li@soarcloud.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 6, 1),
 (6, 'customer_demo', '13800000006', 'customer@tencent.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 1, 1),
 (7, 'merchant_jd_sub', '13800000007', 'dispatch@jd-air.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1),
-(8, 'merchant_pending', '13800000008', 'biz@pending-cargo.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 0);
+(8, 'merchant_pending', '13800000008', 'biz@pending-cargo.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 0),
+(9, 'dispatcher_sf', '13800000009', 'dispatcher@sf-air.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1);
 
 INSERT INTO uam_account_role (account_id, role_id) VALUES
 (1, 1),
@@ -25,7 +27,9 @@ INSERT INTO uam_account_role (account_id, role_id) VALUES
 (5, 5),
 (6, 6),
 (7, 2),
-(8, 2);
+(8, 2),
+(9, 7);
+
 
 INSERT INTO merchant_archive (merchant_id, account_id, corp_name, license_no, contact_name, contact_phone, airworthiness_cert, audit_state, audit_note) VALUES
 (1, 2, '深圳市丰翼低空物流科技有限公司', '91440300MA5EXXX123', '张经理', '13800000002', 'CAAC-CCAR92-2024-008', 1, '企业适航许可与空运承运资质完备，审核通过'),
@@ -73,7 +77,7 @@ INSERT INTO fence_rule (rule_id, rule_name, buffer_distance, max_altitude, actio
 
 -- 样例申报单 (flight_apply)
 INSERT INTO flight_apply (apply_id, apply_sn, order_id, merchant_id, uav_id, pilot_id, route_line, alt_planned, start_at, end_at, check_state, approve_state, approver_id, approve_note, approve_at) VALUES
-(1, 'FA202610170001', 101, 1, 1, 1, 'LINESTRING(113.943 22.540, 114.000 22.545, 114.062 22.553)', 100, '2026-10-18 09:00:00', '2026-10-18 10:30:00', 1, 1, 3, '合规校验通过，航线无空域冲突，批准执行', '2026-10-17 12:00:00'),
+(1, 'FA202610170001', 101, 1, 1, 1, 'LINESTRING(113.943 22.540, 114.000 22.545, 114.062 22.553)', 100, '2026-10-17 09:00:00', '2026-10-17 10:30:00', 1, 1, 3, '合规校验通过，航线无空域冲突，批准执行', '2026-10-17 12:00:00'),
 (2, 'FA202610170002', 102, 1, 3, 1, 'LINESTRING(114.218 22.695, 114.240 22.690, 114.265 22.578)', 90, '2026-10-19 14:00:00', '2026-10-19 15:30:00', 1, 0, NULL, NULL, NULL);
 
 -- 样例违规案件 (violation_case)

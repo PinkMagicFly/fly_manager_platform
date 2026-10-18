@@ -102,17 +102,10 @@ public class FeeCalculatorService {
     }
 
     /**
-     * 大地球面距离计算 (Haversine Formula)
+     * 大地球面距离计算 (Haversine Formula)，已抽取至 GeoUtils 公共复用
      */
     public static double calculateDistanceKm(double lon1, double lat1, double lon2, double lat2) {
-        double radLat1 = Math.toRadians(lat1);
-        double radLat2 = Math.toRadians(lat2);
-        double deltaLat = Math.toRadians(lat2 - lat1);
-        double deltaLon = Math.toRadians(lon2 - lon1);
-
-        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
-                + Math.cos(radLat1) * Math.cos(radLat2) * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return EARTH_RADIUS_KM * c;
+        return com.fly.platform.common.util.GeoUtils.haversineKm(lon1, lat1, lon2, lat2);
     }
+
 }

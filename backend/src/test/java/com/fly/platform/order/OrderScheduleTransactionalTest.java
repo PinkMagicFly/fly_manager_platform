@@ -60,6 +60,8 @@ public class OrderScheduleTransactionalTest {
         invalidDTO.setOrderId(orderId);
         invalidDTO.setUavId(1L);
         invalidDTO.setPilotId(999999L); // 不存在
+        invalidDTO.setRouteLine("LINESTRING(113.943000 22.540000, 114.000000 22.545000, 114.062000 22.553000)");
+
 
         assertThatThrownBy(() -> cargoOrderService.dispatchOrder(invalidDTO, 1L))
                 .isInstanceOf(BusinessException.class)

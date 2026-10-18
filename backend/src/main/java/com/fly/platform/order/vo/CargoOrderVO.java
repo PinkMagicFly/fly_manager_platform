@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 低空货运订单核心业务展现视图对象
@@ -118,6 +119,9 @@ public class CargoOrderVO {
 
     /** 申报审批状态 */
     private Integer applyApproveState;
+
+    /** 申报飞行航线坐标点序列 [[lng, lat], ...] */
+    private List<List<Double>> routePoints;
 
     /** 期望最晚送达时间 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")

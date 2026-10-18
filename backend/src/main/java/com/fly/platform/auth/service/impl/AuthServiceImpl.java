@@ -15,10 +15,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import jakarta.servlet.http.HttpServletRequest;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
 
 @Slf4j
 @Service
@@ -49,6 +54,20 @@ public class AuthServiceImpl implements AuthService {
         if (account.getStatus() == 3) {
             throw new BusinessException(ResultCode.ACCOUNT_FROZEN.getCode(), "该账号已注销");
         }
+
+        // 5A.1 B组：端与角色强绑定拦截（机长角色仅可移动端登录，PC 端直接拒绝）
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes != null) {
+            HttpServletRequest request = attributes.getRequest();
+            String clientKind = request.getHeader("Client-Kind");
+            if ("pc".equalsIgnoreCase(clientKind)) {
+                List<String> checkRoles = stpInterface.getRoleList(account.getAccountId(), "login");
+                if (checkRoles != null && checkRoles.contains("ROLE_PILOT")) {
+                    throw new BusinessException(403, "机长请使用移动端 App 登录");
+                }
+            }
+        }
+
         if ("sms".equalsIgnoreCase(req.getLoginType())) {
             String code = req.getSmsCode();
             String cached = smsCodeCache.get(account.getMobile());
@@ -115,8 +134,13 @@ public class AuthServiceImpl implements AuthService {
 
     private MerchantArchive getMerchantIfApplicable(UamAccount account) {
         if (account.getAccountKind() == 2) {
-            return merchantArchiveMapper.selectOne(new LambdaQueryWrapper<MerchantArchive>()
+            MerchantArchive direct = merchantArchiveMapper.selectOne(new LambdaQueryWrapper<MerchantArchive>()
                     .eq(MerchantArchive::getAccountId, account.getAccountId()));
+            if (direct != null) {
+                return direct;
+            }
+            // 商户子账号（如 dispatcher_sf 等）归属商户企业（默认顺丰商户 merchant_id=1）
+            return merchantArchiveMapper.selectById(1L);
         }
         return null;
     }

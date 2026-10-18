@@ -114,6 +114,16 @@ export function getSiteBookings(id: number, limit = 10): Promise<any> {
   })
 }
 
+/** 经纬度就近吸附起降场站 */
+export function snapSite(lng: number, lat: number): Promise<any> {
+  return request({
+    url: '/api/v1/site/snap',
+    method: 'get',
+    params: { lng, lat }
+  })
+}
+
+
 // 机组人员资质与排班
 export function getCrewStaffList(): Promise<any> {
   return request({

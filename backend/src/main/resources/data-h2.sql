@@ -5,7 +5,8 @@ INSERT INTO uam_role (role_id, role_code, role_name, description) VALUES
 (3, 'ROLE_ATC', '空管监察员', '空域合规监管与飞行计划审批'),
 (4, 'ROLE_PILOT', '无人机商用机长', '外场无人机执飞作业'),
 (5, 'ROLE_MAINTAINER', '场站运维专员', '场站设施与设备维保'),
-(6, 'ROLE_CUSTOMER', '货运客户', '在线寄件下单');
+(6, 'ROLE_CUSTOMER', '货运客户', '在线寄件下单'),
+(7, 'ROLE_DISPATCHER', '商户调度员', '负责订单调度、航线规划与飞行计划申报');
 
 -- 权限字典
 INSERT INTO uam_role_grant (grant_id, role_id, perm_code, perm_name) VALUES
@@ -20,7 +21,9 @@ INSERT INTO uam_role_grant (grant_id, role_id, perm_code, perm_name) VALUES
 (9, 3, 'airspace:view', '空域态势查看'),
 (10, 3, 'flight:review', '飞行计划审批'),
 (11, 4, 'pilot:flight', '起飞与降落操作'),
-(12, 6, 'order:create', '下单寄件');
+(12, 6, 'order:create', '下单寄件'),
+(13, 7, 'order:manage', '订单管理'),
+(14, 7, 'flight:apply', '飞行计划申报');
 
 -- 账户数据（默认密码均为 123456）
 -- BCrypt 散列：$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2
@@ -28,11 +31,13 @@ INSERT INTO uam_account (account_id, login_name, mobile, email, pwd_digest, acco
 (1, 'admin', '13800000001', 'admin@soarcloud.com', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 3, 1),
 (2, 'merchant_sf', '13800000002', 'sf@soarcloud.com', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1),
 (3, 'atc_officer', '13800000003', 'atc@soarcloud.com', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 4, 1),
-(4, 'pilot_zhang', '13800000004', 'pilot@soarcloud.com', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 5, 1),
+(4, 'pilot_sf', '13800000004', 'pilot@soarcloud.com', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 5, 1),
 (5, 'maintain_li', '13800000005', 'maintain@soarcloud.com', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 6, 1),
 (6, 'customer_demo', '13800000006', 'customer@soarcloud.com', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 1, 1),
 (7, 'merchant_sf_sub1', '13800000007', 'sub1@sf.com', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1),
-(8, 'merchant_pending', '13800000008', 'pending@soarcloud.com', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 0);
+(8, 'merchant_pending', '13800000008', 'pending@soarcloud.com', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 0),
+(9, 'dispatcher_sf', '13800000009', 'dispatcher@sf-air.com', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1);
+
 
 -- 账户角色关联
 INSERT INTO uam_account_role (id, account_id, role_id) VALUES
@@ -73,7 +78,7 @@ INSERT INTO fence_rule (rule_id, rule_name, buffer_distance, max_altitude, actio
 
 -- 样例申报单 (flight_apply)
 INSERT INTO flight_apply (apply_id, apply_sn, order_id, merchant_id, uav_id, pilot_id, route_line, alt_planned, start_at, end_at, check_state, approve_state, approver_id, approve_note, approve_at) VALUES
-(1, 'FA202610170001', 101, 1, 1, 1, 'LINESTRING(113.943 22.540, 114.000 22.545, 114.062 22.553)', 100, '2026-10-18 09:00:00', '2026-10-18 10:30:00', 1, 1, 3, '合规校验通过，航线无空域冲突，批准执行', '2026-10-17 12:00:00'),
+(1, 'FA202610170001', 101, 1, 1, 1, 'LINESTRING(113.943 22.540, 114.000 22.545, 114.062 22.553)', 100, '2026-10-17 09:00:00', '2026-10-17 10:30:00', 1, 1, 3, '合规校验通过，航线无空域冲突，批准执行', '2026-10-17 12:00:00'),
 (2, 'FA202610170002', 102, 1, 3, 1, 'LINESTRING(114.218 22.695, 114.240 22.690, 114.265 22.578)', 90, '2026-10-19 14:00:00', '2026-10-19 15:30:00', 1, 0, NULL, NULL, NULL);
 
 -- 样例违规案件 (violation_case)
