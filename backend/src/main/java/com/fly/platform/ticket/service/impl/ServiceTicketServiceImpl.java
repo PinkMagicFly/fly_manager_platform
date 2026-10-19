@@ -1,13 +1,19 @@
 package com.fly.platform.ticket.service.impl;
 
+import cn.dev33.satoken.stp.StpInterface;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fly.platform.auth.entity.UamAccount;
+import com.fly.platform.auth.entity.UamAccountRole;
+import com.fly.platform.auth.entity.UamRole;
 import com.fly.platform.auth.mapper.UamAccountMapper;
+import com.fly.platform.auth.mapper.UamAccountRoleMapper;
+import com.fly.platform.auth.mapper.UamRoleMapper;
 import com.fly.platform.common.api.PageResult;
+import com.fly.platform.common.desensitize.DesensitizeUtils;
 import com.fly.platform.common.exception.BusinessException;
 import com.fly.platform.order.entity.CargoOrder;
 import com.fly.platform.order.mapper.CargoOrderMapper;
@@ -20,6 +26,7 @@ import com.fly.platform.ticket.enums.TicketStateEnum;
 import com.fly.platform.ticket.enums.TicketTypeEnum;
 import com.fly.platform.ticket.mapper.ServiceTicketMapper;
 import com.fly.platform.ticket.service.ServiceTicketService;
+import com.fly.platform.ticket.vo.TicketAssigneeVO;
 import com.fly.platform.ticket.vo.TicketReplyItemVO;
 import com.fly.platform.ticket.vo.TicketVO;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -49,6 +57,9 @@ public class ServiceTicketServiceImpl implements ServiceTicketService {
     private final ServiceTicketMapper ticketMapper;
     private final UamAccountMapper accountMapper;
     private final CargoOrderMapper cargoOrderMapper;
+    private final UamRoleMapper roleMapper;
+    private final UamAccountRoleMapper accountRoleMapper;
+    private final StpInterface stpInterface;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -133,6 +144,32 @@ public class ServiceTicketServiceImpl implements ServiceTicketService {
         if (ticket == null) {
             throw new BusinessException(404, "工单记录不存在: " + id);
         }
+        if (StpUtil.isLogin()) {
+            List<String> callerRoles = StpUtil.getRoleList();
+            if (!callerRoles.contains("ROLE_ADMIN") && !callerRoles.contains("ROLE_MERCHANT")) {
+                throw new BusinessException(403, "仅商户管理人员或平台管理员有权分派工单");
+            }
+        }
+        if (dto.getAssigneeId() == null || dto.getAssigneeId() <= 0) {
+            throw new BusinessException(400, "请选择具体的经办客服专员");
+        }
+
+        UamAccount assignee = accountMapper.selectById(dto.getAssigneeId());
+        if (assignee == null || assignee.getStatus() == null || assignee.getStatus() != 1) {
+            throw new BusinessException(400, "指定的经办客服专员账号不存在或已被停用");
+        }
+
+        // 强守卫1：严禁分派给平台管理员（ROLE_ADMIN）
+        List<String> targetRoles = stpInterface.getRoleList(assignee.getAccountId(), "login");
+        if (targetRoles.contains("ROLE_ADMIN")) {
+            throw new BusinessException(400, "不可将客户工单分派给平台管理员，请分派给专属客服专员");
+        }
+
+        // 强守卫2：分派的目标人员必须具备客服专员或商户协同权限
+        if (!targetRoles.contains("ROLE_CS") && !targetRoles.contains("ROLE_MERCHANT")) {
+            throw new BusinessException(400, "指定的人员无客服经办权限，请在企业子账号中为其分配【商户客服专员】角色");
+        }
+
         ticket.setAssigneeId(dto.getAssigneeId());
         if (TicketStateEnum.PENDING.getCode().equals(ticket.getState())) {
             ticket.setState(TicketStateEnum.PROCESSING.getCode());
@@ -140,11 +177,49 @@ public class ServiceTicketServiceImpl implements ServiceTicketService {
         ticket.updateAudit();
 
         // 追加时间流水
-        UamAccount assignee = accountMapper.selectById(dto.getAssigneeId());
-        String targetName = assignee != null ? assignee.getLoginName() : "专员#" + dto.getAssigneeId();
-        appendReply(ticket, getCurrentLoginName(), "官方专员", "工单已转派给客服专员【" + targetName + "】负责跟进处理");
+        String targetName = assignee.getLoginName();
+        appendReply(ticket, getCurrentLoginName(), "官方专员", "工单已由商户调度分派给客服专员【" + targetName + "】负责跟进处理");
 
         ticketMapper.updateById(ticket);
+    }
+
+    @Override
+    public List<TicketAssigneeVO> getAvailableAssignees() {
+        // 查找 ROLE_CS 角色
+        UamRole csRole = roleMapper.selectOne(new LambdaQueryWrapper<UamRole>()
+                .eq(UamRole::getRoleCode, "ROLE_CS"));
+        if (csRole == null) {
+            return Collections.emptyList();
+        }
+
+        // 查询拥有 ROLE_CS 的所有关联账号
+        List<UamAccountRole> uars = accountRoleMapper.selectList(new LambdaQueryWrapper<UamAccountRole>()
+                .eq(UamAccountRole::getRoleId, csRole.getRoleId()));
+        if (uars.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> accountIds = uars.stream().map(UamAccountRole::getAccountId).distinct().collect(Collectors.toList());
+        List<UamAccount> accounts = accountMapper.selectBatchIds(accountIds);
+
+        List<TicketAssigneeVO> voList = new ArrayList<>();
+        for (UamAccount acc : accounts) {
+            if (acc.getStatus() == null || acc.getStatus() != 1) {
+                continue;
+            }
+            // 严禁包含超级管理员
+            List<String> roles = stpInterface.getRoleList(acc.getAccountId(), "login");
+            if (roles.contains("ROLE_ADMIN")) {
+                continue;
+            }
+            voList.add(TicketAssigneeVO.builder()
+                    .accountId(acc.getAccountId())
+                    .loginName(acc.getLoginName())
+                    .mobile(DesensitizeUtils.maskMobile(acc.getMobile()))
+                    .roleLabel("商户客服专员")
+                    .build());
+        }
+        return voList;
     }
 
     @Override
@@ -158,12 +233,36 @@ public class ServiceTicketServiceImpl implements ServiceTicketService {
             throw new BusinessException(400, "该工单已办结关闭，无法继续回复留言");
         }
 
-        if (TicketStateEnum.PENDING.getCode().equals(ticket.getState())) {
-            ticket.setState(TicketStateEnum.PROCESSING.getCode());
+        Long currentAccountId = 0L;
+        if (StpUtil.isLogin()) {
+            try {
+                currentAccountId = StpUtil.getLoginIdAsLong();
+            } catch (Exception ignored) {}
         }
-        ticket.updateAudit();
+        List<String> roles = StpUtil.isLogin() ? StpUtil.getRoleList() : Collections.emptyList();
 
-        appendReply(ticket, getCurrentLoginName(), "客服专员", dto.getContent());
+        // 区分客户回复 与 客服/管理人员回复
+        boolean isCustomer = roles.contains("ROLE_CUSTOMER")
+                && !roles.contains("ROLE_ADMIN")
+                && !roles.contains("ROLE_MERCHANT")
+                && !roles.contains("ROLE_CS");
+
+        if (isCustomer) {
+            // 客户防越权守卫：只能回复本人提交的工单
+            if (!currentAccountId.equals(ticket.getCustomerId())) {
+                throw new BusinessException(403, "只能对本人提交的服务工单进行回复与补充");
+            }
+            // 客户追问/补充回答，状态保持原状，角色标识为“客户”
+            appendReply(ticket, getCurrentLoginName(), "客户", dto.getContent());
+        } else {
+            // 客服/商户/管理员回复：若处于待处理状态，推进至处理中
+            if (TicketStateEnum.PENDING.getCode().equals(ticket.getState())) {
+                ticket.setState(TicketStateEnum.PROCESSING.getCode());
+            }
+            appendReply(ticket, getCurrentLoginName(), "客服专员", dto.getContent());
+        }
+
+        ticket.updateAudit();
         ticketMapper.updateById(ticket);
     }
 

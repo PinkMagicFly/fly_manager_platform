@@ -11,6 +11,7 @@ import com.fly.platform.ticket.dto.TicketCloseDTO;
 import com.fly.platform.ticket.dto.TicketCreateDTO;
 import com.fly.platform.ticket.dto.TicketReplyDTO;
 import com.fly.platform.ticket.service.ServiceTicketService;
+import com.fly.platform.ticket.vo.TicketAssigneeVO;
 import com.fly.platform.ticket.vo.TicketVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -50,10 +51,10 @@ public class ServiceTicketController {
     }
 
     /**
-     * 管理端分页查询工单列表
+     * 管理端/客服端分页查询工单列表
      */
     @GetMapping("/page")
-    @SaCheckRole(value = {"ROLE_ADMIN", "ROLE_MERCHANT"}, mode = SaMode.OR)
+    @SaCheckRole(value = {"ROLE_ADMIN", "ROLE_MERCHANT", "ROLE_CS"}, mode = SaMode.OR)
     public Result<PageResult<TicketVO>> pageTickets(
             @RequestParam(required = false) Integer state,
             @RequestParam(required = false) Integer type,
@@ -73,10 +74,19 @@ public class ServiceTicketController {
     }
 
     /**
-     * 分派工单处理专员（仅超管权限）
+     * 获取可供分派的客服专员列表（平台管理员或商户总账号均可调用）
+     */
+    @GetMapping("/assignees")
+    @SaCheckRole(value = {"ROLE_ADMIN", "ROLE_MERCHANT"}, mode = SaMode.OR)
+    public Result<List<TicketAssigneeVO>> getAvailableAssignees() {
+        return Result.ok(ticketService.getAvailableAssignees());
+    }
+
+    /**
+     * 分派工单经办客服专员（支持商户总账号及平台超管分派）
      */
     @PutMapping("/{id}/assign")
-    @SaCheckRole("ROLE_ADMIN")
+    @SaCheckRole(value = {"ROLE_ADMIN", "ROLE_MERCHANT"}, mode = SaMode.OR)
     @Audit(module = "工单调度", action = "分派工单经办客服")
     public Result<Void> assignTicket(@PathVariable Long id, @Valid @RequestBody TicketAssignDTO dto) {
         ticketService.assign(id, dto);
@@ -84,25 +94,26 @@ public class ServiceTicketController {
     }
 
     /**
-     * 官方客服答复工单
+     * 答复与追问工单（客户可针对工单继续回答/追问，客服/商户/超管可进行官方答复）
      */
     @PutMapping("/{id}/reply")
-    @SaCheckRole(value = {"ROLE_ADMIN", "ROLE_MERCHANT"}, mode = SaMode.OR)
-    @Audit(module = "客户服务", action = "官方答复服务工单")
+    @SaCheckLogin
+    @Audit(module = "客户服务", action = "答复服务工单")
     public Result<Void> replyTicket(@PathVariable Long id, @Valid @RequestBody TicketReplyDTO dto) {
         ticketService.reply(id, dto);
         return Result.ok();
     }
 
     /**
-     * 办结关闭工单
+     * 办结关闭工单（客服/商户/超管均可办结）
      */
     @PutMapping("/{id}/close")
-    @SaCheckRole(value = {"ROLE_ADMIN", "ROLE_MERCHANT"}, mode = SaMode.OR)
+    @SaCheckRole(value = {"ROLE_ADMIN", "ROLE_MERCHANT", "ROLE_CS"}, mode = SaMode.OR)
     @Audit(module = "客户服务", action = "办结关闭服务工单")
     public Result<Void> closeTicket(@PathVariable Long id, @RequestBody(required = false) TicketCloseDTO dto) {
         ticketService.close(id, dto);
         return Result.ok();
     }
 }
+
 

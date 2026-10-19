@@ -6,7 +6,8 @@ INSERT INTO uam_role (role_id, role_code, role_name, description) VALUES
 (4, 'ROLE_PILOT', '无人机商用机长', '外场无人机执飞作业'),
 (5, 'ROLE_MAINTAINER', '场站运维专员', '场站设施与设备维保'),
 (6, 'ROLE_CUSTOMER', '货运客户', '在线寄件下单'),
-(7, 'ROLE_DISPATCHER', '商户调度员', '负责订单调度、航线规划与飞行计划申报');
+(7, 'ROLE_DISPATCHER', '商户调度员', '负责订单调度、航线规划与飞行计划申报'),
+(8, 'ROLE_CS', '商户客服专员', '负责客户工单的受理、协同跟进与办结关闭');
 
 -- 权限字典
 INSERT INTO uam_role_grant (grant_id, role_id, perm_code, perm_name) VALUES
@@ -23,7 +24,8 @@ INSERT INTO uam_role_grant (grant_id, role_id, perm_code, perm_name) VALUES
 (11, 4, 'pilot:flight', '起飞与降落操作'),
 (12, 6, 'order:create', '下单寄件'),
 (13, 7, 'order:manage', '订单管理'),
-(14, 7, 'flight:apply', '飞行计划申报');
+(14, 7, 'flight:apply', '飞行计划申报'),
+(15, 8, 'ticket:reply', '工单答复与关闭');
 
 -- 账户数据（默认密码均为 123456）
 -- BCrypt 散列：$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2
@@ -36,7 +38,8 @@ INSERT INTO uam_account (account_id, login_name, mobile, email, pwd_digest, acco
 (6, 'customer_demo', '13800000006', 'customer@soarcloud.com', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 1, 1),
 (7, 'merchant_sf_sub1', '13800000007', 'sub1@sf.com', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1),
 (8, 'merchant_pending', '13800000008', 'pending@soarcloud.com', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 0),
-(9, 'dispatcher_sf', '13800000009', 'dispatcher@sf-air.com', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1);
+(9, 'dispatcher_sf', '13800000009', 'dispatcher@sf-air.com', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1),
+(10, 'cs_sf', '13800000010', 'cs@sf-air.com', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1);
 
 
 -- 账户角色关联
@@ -48,7 +51,9 @@ INSERT INTO uam_account_role (id, account_id, role_id) VALUES
 (5, 5, 5),
 (6, 6, 6),
 (7, 7, 2),
-(8, 8, 2);
+(8, 8, 2),
+(9, 9, 7),
+(10, 10, 8);
 
 -- 商户企业档案
 INSERT INTO merchant_archive (merchant_id, account_id, corp_name, license_no, contact_name, contact_phone, airworthiness_cert, audit_state, audit_note) VALUES

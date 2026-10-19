@@ -68,6 +68,16 @@
               <el-icon><RefreshRight /></el-icon> 一键重置种子数据
             </el-button>
 
+            <!-- 客服专员专属快捷入口 -->
+            <template v-if="isCustomerService">
+              <el-button type="primary" plain @click="$router.push('/admin/tickets')">
+                <el-icon><Service /></el-icon> 客户服务工单台
+              </el-button>
+              <el-button type="info" plain @click="$router.push('/order/board')">
+                <el-icon><List /></el-icon> 订单综合看板
+              </el-button>
+            </template>
+
             <!-- 调度员专属快捷入口 -->
             <template v-if="isDispatcher">
               <el-button type="primary" plain @click="$router.push('/order/board')">
@@ -81,8 +91,8 @@
               </el-button>
             </template>
 
-            <!-- 商户主账号专属快捷入口 (调度员不展示子账号设置) -->
-            <el-button v-if="isMerchant && !isDispatcher" type="primary" plain @click="$router.push('/merchant/sub-accounts')">
+            <!-- 商户主账号专属快捷入口 (调度员与客服不展示子账号设置) -->
+            <el-button v-if="isMerchant && !isDispatcher && !isCustomerService" type="primary" plain @click="$router.push('/merchant/sub-accounts')">
               <el-icon><User /></el-icon> 企业子账号设置
             </el-button>
           </div>
@@ -124,7 +134,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { UserFilled, Stamp, CreditCard, Document, User, RefreshRight, List, Compass, Guide } from '@element-plus/icons-vue'
+import { UserFilled, Stamp, CreditCard, Document, User, RefreshRight, List, Compass, Guide, Service } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
 
@@ -159,11 +169,13 @@ const handleResetDatabase = () => {
 }
 
 const isAdmin = computed(() => userStore.userInfo?.roles.includes('ROLE_ADMIN'))
+const isCustomerService = computed(() => userStore.userInfo?.roles.includes('ROLE_CS'))
 const isDispatcher = computed(() => userStore.userInfo?.roles.includes('ROLE_DISPATCHER'))
-const isMerchant = computed(() => userStore.userInfo?.roles.includes('ROLE_MERCHANT') || userStore.userInfo?.roles.includes('ROLE_DISPATCHER') || userStore.userInfo?.accountKind === 2)
+const isMerchant = computed(() => (userStore.userInfo?.roles.includes('ROLE_MERCHANT') || userStore.userInfo?.roles.includes('ROLE_DISPATCHER') || userStore.userInfo?.accountKind === 2) && !isCustomerService.value)
 
 const userRoleName = computed(() => {
   if (isAdmin.value) return '超级管理员'
+  if (isCustomerService.value) return '商户客服专员 (顺丰速运)'
   if (isDispatcher.value) return '商户调度员 (顺丰速运)'
   if (isMerchant.value) return '物流商户主账号'
   return '平台操作员'

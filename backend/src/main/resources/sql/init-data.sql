@@ -20,7 +20,8 @@ role_name, description) VALUES
 (4, 'ROLE_PILOT', '无人机商用机长', '外场无人机执飞机长，拥有移动端起飞确认、在途状态上报与故障填报权限'),
 (5, 'ROLE_MAINTAINER', '场站运维专员', '负责无人机巡检维保、智能充电机柜维护与场站预约确认'),
 (6, 'ROLE_CUSTOMER', '货运个人/企业客户', '拥有在线下单试算、电子支付、轨迹实时查看与送达签收权限'),
-(7, 'ROLE_DISPATCHER', '商户调度员', '负责订单综合看板、接单、调度航线规划与飞行计划申报');
+(7, 'ROLE_DISPATCHER', '商户调度员', '负责订单综合看板、接单、调度航线规划与飞行计划申报'),
+(8, 'ROLE_CS', '商户客服专员', '负责客户工单的受理、协同跟进、答复与办结关闭');
 
 -- 2. 初始化权限定义与角色授权 (uam_role_grant)
 TRUNCATE TABLE uam_role_grant;
@@ -46,7 +47,15 @@ role_id, perm_code, perm_name) VALUES
 (2, 'uav:manage', '机队资产台账与五态管理'),
 (2, 'flight:apply', '航线规划与飞行计划申报'),
 (2, 'site:booking', '起降场站机位占用预约'),
-(2, 'settle:bill:view', '对账单管理与开票申请');
+(2, 'settle:bill:view', '对账单管理与开票申请'),
+(2, 'ticket:assign', '客户工单调度与经办客服分派');
+
+-- 商户客服专员权限
+INSERT INTO uam_role_grant (
+role_id, perm_code, perm_name) VALUES
+(8, 'ticket:view', '客户服务工单列表与详情查看'),
+(8, 'ticket:reply', '客户工单官方答复与沟通'),
+(8, 'ticket:close', '客户工单办结关闭处理');
 
 -- 商户调度员权限（无账单与组织权限）
 INSERT INTO uam_role_grant (
@@ -92,7 +101,8 @@ INSERT INTO uam_account (account_id, login_name, mobile, email, pwd_digest, acco
 (6, 'customer_demo', '13800000006', 'customer@tencent.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 1, 1, NOW(), '127.0.0.1'),
 (7, 'merchant_jd_sub', '13800000007', 'dispatch@jd-air.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1, NOW(), '127.0.0.1'),
 (8, 'merchant_pending', '13800000008', 'biz@pending-cargo.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 0, NULL, NULL),
-(9, 'dispatcher_sf', '13800000009', 'dispatcher@sf-air.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1, NOW(), '127.0.0.1');
+(9, 'dispatcher_sf', '13800000009', 'dispatcher@sf-air.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1, NOW(), '127.0.0.1'),
+(10, 'cs_sf', '13800000010', 'cs@sf-air.com', '/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 2, 1, NOW(), '127.0.0.1');
 
 -- 4. 账户-角色多对多关联 (uam_account_role)
 TRUNCATE TABLE uam_account_role;
@@ -106,7 +116,8 @@ role_id) VALUES
 (6, 6), -- customer_demo -> ROLE_CUSTOMER
 (7, 2), -- merchant_jd_sub -> ROLE_MERCHANT
 (8, 2), -- merchant_pending -> ROLE_MERCHANT
-(9, 7); -- dispatcher_sf -> ROLE_DISPATCHER
+(9, 7), -- dispatcher_sf -> ROLE_DISPATCHER
+(10, 8); -- cs_sf -> ROLE_CS
 
 
 -- 5. 初始化商户档案 (merchant_archive)

@@ -14,7 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -136,9 +138,23 @@ public class MerchantArchiveServiceImpl implements MerchantArchiveService {
 
     @Override
     public List<UamAccount> listSubAccounts(Long parentAccountId) {
-        return accountMapper.selectList(new LambdaQueryWrapper<UamAccount>()
+        List<UamAccount> list = accountMapper.selectList(new LambdaQueryWrapper<UamAccount>()
                 .eq(UamAccount::getAccountKind, 2)
                 .ne(UamAccount::getAccountId, parentAccountId));
+        for (UamAccount acc : list) {
+            List<UamAccountRole> uars = accountRoleMapper.selectList(new LambdaQueryWrapper<UamAccountRole>()
+                    .eq(UamAccountRole::getAccountId, acc.getAccountId()));
+            if (!uars.isEmpty()) {
+                List<Long> rids = uars.stream().map(UamAccountRole::getRoleId).collect(Collectors.toList());
+                List<UamRole> roles = roleMapper.selectBatchIds(rids);
+                acc.setRoleNames(roles.stream().map(UamRole::getRoleName).collect(Collectors.toList()));
+                acc.setRoleCodes(roles.stream().map(UamRole::getRoleCode).collect(Collectors.toList()));
+            } else {
+                acc.setRoleNames(Collections.emptyList());
+                acc.setRoleCodes(Collections.emptyList());
+            }
+        }
+        return list;
     }
 
     @Override

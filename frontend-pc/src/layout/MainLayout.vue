@@ -39,8 +39,8 @@
           <el-menu-item index="/admin/audit-logs">操作审计日志</el-menu-item>
         </el-sub-menu>
 
-        <!-- 2. 商户/管理员专属：企业子账号组织管理 (调度员无此权限) -->
-        <el-sub-menu index="merchant" v-if="(isMerchant && !isDispatcher) || isAdmin">
+        <!-- 2. 商户/管理员专属：企业子账号组织管理 (调度员及纯客服无此权限) -->
+        <el-sub-menu index="merchant" v-if="((isMerchant && !isDispatcher && !isCustomerService) || isAdmin)">
           <template #title>
             <el-icon><OfficeBuilding /></el-icon>
             <span>企业组织管理</span>
@@ -50,7 +50,7 @@
 
 
         <!-- 3. 机队资产中心 (商户/运维/管理员可见) -->
-        <el-sub-menu index="asset" v-if="isMerchant || isAdmin || isAtc">
+        <el-sub-menu index="asset" v-if="(isMerchant || isAdmin || isAtc) && !isCustomerService">
           <template #title>
             <el-icon><Van /></el-icon>
             <span>机队资产中心</span>
@@ -62,7 +62,7 @@
         </el-sub-menu>
 
         <!-- 4. 空管/超管专属：空域合规监管工作台 (无申报向导) -->
-        <el-sub-menu index="airspace-atc" v-if="isAtc || isAdmin">
+        <el-sub-menu index="airspace-atc" v-if="(isAtc || isAdmin) && !isCustomerService">
           <template #title>
             <el-icon><Compass /></el-icon>
             <span>空域合规监管</span>
@@ -72,7 +72,7 @@
         </el-sub-menu>
 
         <!-- 5. 商户专属：飞行申报与航线规划中枢 -->
-        <el-sub-menu index="airspace-merchant" v-if="isMerchant && !isAtc && !isAdmin">
+        <el-sub-menu index="airspace-merchant" v-if="isMerchant && !isAtc && !isAdmin && !isCustomerService">
           <template #title>
             <el-icon><Guide /></el-icon>
             <span>空域与航线申报</span>
@@ -81,23 +81,23 @@
           <el-menu-item index="/airspace/apply-wizard">飞行计划申报向导</el-menu-item>
           <el-menu-item index="/airspace/approval">飞行申报进度台账</el-menu-item>
         </el-sub-menu>
-        <!-- 6. 订单运营中心 (商户/超级管理员可见) -->
-        <el-sub-menu index="order" v-if="isMerchant || isAdmin">
+        <!-- 6. 订单运营中心 (商户/客服/超级管理员可见) -->
+        <el-sub-menu index="order" v-if="isMerchant || isAdmin || isCustomerService">
           <template #title>
             <el-icon><List /></el-icon>
             <span>订单运营中心</span>
           </template>
           <el-menu-item index="/order/board">订单综合看板</el-menu-item>
-          <el-menu-item index="/order/dispatch">智能调度工作台</el-menu-item>
-          <el-menu-item index="/order/bills" v-if="!isDispatcher">结算与账单中心</el-menu-item>
+          <el-menu-item index="/order/dispatch" v-if="!isCustomerService">智能调度工作台</el-menu-item>
+          <el-menu-item index="/order/bills" v-if="!isDispatcher && !isCustomerService">结算与账单中心</el-menu-item>
         </el-sub-menu>
-        <!-- 7. 应急与客服中心 (商户/管理员可见) -->
-        <el-sub-menu index="service-alarm" v-if="isMerchant || isAdmin">
+        <!-- 7. 应急与客服中心 (商户/客服/管理员可见) -->
+        <el-sub-menu index="service-alarm" v-if="isMerchant || isAdmin || isCustomerService">
           <template #title>
             <el-icon><Warning /></el-icon>
             <span>应急监控与客服</span>
           </template>
-          <el-menu-item index="/admin/alarm">实时告警处置台</el-menu-item>
+          <el-menu-item index="/admin/alarm" v-if="isMerchant || isAdmin">实时告警处置台</el-menu-item>
           <el-menu-item index="/admin/tickets">客户服务工单台</el-menu-item>
         </el-sub-menu>
 
@@ -174,13 +174,15 @@ const activePath = computed(() => route.path)
 const currentRouteTitle = computed(() => (route.meta.title as string) || '工作台')
 
 const isAdmin = computed(() => userStore.userInfo?.roles.includes('ROLE_ADMIN'))
-const isMerchant = computed(() => userStore.userInfo?.roles.includes('ROLE_MERCHANT') || userStore.userInfo?.roles.includes('ROLE_DISPATCHER') || userStore.userInfo?.accountKind === 2)
+const isCustomerService = computed(() => userStore.userInfo?.roles.includes('ROLE_CS'))
 const isDispatcher = computed(() => userStore.userInfo?.roles.includes('ROLE_DISPATCHER'))
+const isMerchant = computed(() => (userStore.userInfo?.roles.includes('ROLE_MERCHANT') || userStore.userInfo?.roles.includes('ROLE_DISPATCHER') || userStore.userInfo?.accountKind === 2) && !isCustomerService.value)
 const isAtc = computed(() => userStore.userInfo?.roles.includes('ROLE_ATC') || userStore.userInfo?.accountKind === 4)
 const isPilot = computed(() => userStore.userInfo?.roles.includes('ROLE_PILOT') || userStore.userInfo?.accountKind === 5)
 
 const roleText = computed(() => {
   if (userStore.userInfo?.roles.includes('ROLE_ADMIN')) return isMobile.value ? '超管' : '平台超级管理员'
+  if (userStore.userInfo?.roles.includes('ROLE_CS')) return isMobile.value ? '客服' : '商户客服专员'
   if (userStore.userInfo?.roles.includes('ROLE_DISPATCHER')) return isMobile.value ? '调度员' : '商户调度员'
   if (userStore.userInfo?.roles.includes('ROLE_MERCHANT')) return isMobile.value ? '商户' : '低空物流商户'
   if (userStore.userInfo?.roles.includes('ROLE_ATC')) return isMobile.value ? '空管' : '空管监察员'
@@ -191,6 +193,7 @@ const roleText = computed(() => {
 
 const roleTagType = computed(() => {
   if (isAdmin.value) return 'danger'
+  if (isCustomerService.value) return 'success'
   if (isMerchant.value) return 'primary'
   return 'info'
 })

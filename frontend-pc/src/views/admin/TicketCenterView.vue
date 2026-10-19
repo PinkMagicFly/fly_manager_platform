@@ -72,17 +72,31 @@
     </el-card>
 
     <!-- 分派专员对话框 -->
-    <el-dialog v-model="assignDialogVisible" title="分派工单经办专员" width="400px" destroy-on-close>
+    <el-dialog v-model="assignDialogVisible" title="分派工单经办专员" width="460px" destroy-on-close>
+      <el-alert
+        v-if="csList.length === 0"
+        type="warning"
+        show-icon
+        :closable="false"
+        title="当前暂无可用客服专员账号"
+        description="请商户总账号前往【企业组织管理 - 子账户与权限设置】为员工配置【商户客服专员】角色。"
+        style="margin-bottom: 16px;"
+      />
       <el-form :model="assignForm" label-width="90px">
-        <el-form-item label="选择专员">
-          <el-select v-model="assignForm.assigneeId" placeholder="选择处理专员" style="width: 100%">
-            <el-option v-for="user in adminUsers" :key="user.accountId" :label="`${user.loginName} (${user.roleLabel})`" :value="user.accountId" />
+        <el-form-item label="选择专员" required>
+          <el-select v-model="assignForm.assigneeId" placeholder="选择处理专员" style="width: 100%" :disabled="csList.length === 0">
+            <el-option
+              v-for="user in csList"
+              :key="user.accountId"
+              :label="`${user.loginName} (${user.roleLabel}) - ${user.mobile || ''}`"
+              :value="user.accountId"
+            />
           </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="assignDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitLoading" @click="submitAssign">确认分派</el-button>
+        <el-button type="primary" :loading="submitLoading" :disabled="csList.length === 0 || !assignForm.assigneeId" @click="submitAssign">确认分派</el-button>
       </template>
     </el-dialog>
 
@@ -112,13 +126,18 @@
           <el-descriptions-item label="工单标题" :span="2">{{ currentTicket.title }}</el-descriptions-item>
           <el-descriptions-item label="诉求详情" :span="2">{{ currentTicket.content }}</el-descriptions-item>
         </el-descriptions>
-        <h4 style="margin: 20px 0 12px 0;">官方答复与处理流水</h4>
+        <h4 style="margin: 20px 0 12px 0;">沟通流水与答复记录</h4>
         <el-timeline>
           <el-timeline-item v-for="(reply, idx) in currentTicket.replies" :key="idx" :timestamp="reply.at" placement="top">
             <div class="reply-card">
               <div class="reply-header">
                 <span class="reply-by">{{ reply.by }}</span>
-                <el-tag size="small" type="primary">{{ reply.role }}</el-tag>
+                <el-tag
+                  size="small"
+                  :type="reply.role === '客户' ? 'success' : (reply.role === '官方专员' ? 'warning' : 'primary')"
+                >
+                  {{ reply.role || '客服' }}
+                </el-tag>
               </div>
               <p class="reply-body">{{ reply.content }}</p>
             </div>
@@ -145,10 +164,7 @@ const ticketList = ref<any[]>([])
 const loading = ref(false)
 const submitLoading = ref(false)
 
-const adminUsers = ref<any[]>([
-  { accountId: 1, loginName: 'admin', roleLabel: '超级管理员' },
-  { accountId: 2, loginName: 'merchant_sf', roleLabel: '商户调度专员' }
-])
+const csList = ref<any[]>([])
 
 const assignDialogVisible = ref(false)
 const currentTicketId = ref<number | null>(null)
@@ -201,9 +217,26 @@ const handleReset = () => {
   loadTickets()
 }
 
-const openAssignDialog = (row: any) => {
+const loadAssignees = async () => {
+  try {
+    const res: any = await request.get('/api/v1/ticket/assignees')
+    csList.value = Array.isArray(res) ? res : []
+  } catch (err: any) {
+    ElMessage.error(err.message || '获取客服专员列表失败')
+    csList.value = []
+  }
+}
+
+const openAssignDialog = async (row: any) => {
   currentTicketId.value = row.ticketId
-  assignForm.value.assigneeId = row.assigneeId || 1
+  await loadAssignees()
+  if (row.assigneeId && csList.value.some(u => u.accountId === row.assigneeId)) {
+    assignForm.value.assigneeId = row.assigneeId
+  } else if (csList.value.length > 0) {
+    assignForm.value.assigneeId = csList.value[0].accountId
+  } else {
+    assignForm.value.assigneeId = undefined
+  }
   assignDialogVisible.value = true
 }
 

@@ -73,7 +73,7 @@ public class AdminDatabaseController {
             }
 
             log.info("超级管理员触发一键重置平台种子数据成功！");
-            return Result.ok("平台初始化种子数据已成功重置！预置账号：admin/merchant_sf/dispatcher_sf/atc_officer/pilot_sf/maintain_li/customer_demo（默认密码 123456）已全部规范就绪。");
+            return Result.ok("平台初始化种子数据已成功重置！预置账号：admin/merchant_sf/dispatcher_sf/cs_sf/atc_officer/pilot_sf/maintain_li/customer_demo（默认密码 123456）已全部规范就绪。");
         } catch (Exception e) {
             log.error("重置平台种子数据失败", e);
             throw new BusinessException(500, "重置种子数据执行失败: " + e.getMessage());

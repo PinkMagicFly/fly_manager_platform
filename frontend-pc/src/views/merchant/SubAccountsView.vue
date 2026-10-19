@@ -4,7 +4,7 @@
       <div class="table-toolbar">
         <div>
           <h3>商户企业子账号管理</h3>
-          <p class="sub-desc">为企业外场飞手、调度员及运维专员开设协同子账号与岗位授权</p>
+          <p class="sub-desc">为企业外场飞手、调度员、客服专员及运维专员开设协同子账号与岗位授权</p>
         </div>
         <el-button type="primary" @click="openCreateDialog">
           <el-icon><Plus /></el-icon> 新增企业子账号
@@ -12,23 +12,39 @@
       </div>
 
       <el-table :data="tableData" v-loading="loading" border stripe style="width: 100%">
-        <el-table-column prop="accountId" label="账户ID" width="100" />
-        <el-table-column prop="loginName" label="登录用户名" min-width="140" />
-        <el-table-column prop="mobile" label="绑定手机号" width="140">
+        <el-table-column prop="accountId" label="账户ID" width="90" />
+        <el-table-column prop="loginName" label="登录用户名" min-width="130" />
+        <el-table-column label="分配岗位角色" min-width="160">
+          <template #default="{ row }">
+            <template v-if="row.roleNames && row.roleNames.length > 0">
+              <el-tag
+                v-for="r in row.roleNames"
+                :key="r"
+                size="small"
+                :type="r.includes('客服') ? 'success' : (r.includes('调度') ? 'primary' : 'info')"
+                style="margin-right: 4px; margin-bottom: 2px;"
+              >
+                {{ r }}
+              </el-tag>
+            </template>
+            <span v-else class="text-muted">企业成员</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="mobile" label="绑定手机号" width="130">
           <template #default="{ row }">
             {{ formatMobile(row.mobile) }}
           </template>
         </el-table-column>
-        <el-table-column prop="email" label="电子邮箱" min-width="160" />
-        <el-table-column prop="status" label="账户状态" width="110">
+        <el-table-column prop="email" label="电子邮箱" min-width="150" />
+        <el-table-column prop="status" label="账户状态" width="100">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'danger'">
               {{ row.status === 1 ? '正常使用' : '已冻结' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" width="180" />
-        <el-table-column label="操作" width="140" fixed="right">
+        <el-table-column prop="createdAt" label="创建时间" width="170" />
+        <el-table-column label="操作" width="130" fixed="right">
           <template #default="{ row }">
             <el-button
               size="small"
@@ -59,9 +75,11 @@
         </el-form-item>
         <el-form-item label="岗位角色" prop="roleIds">
           <el-select v-model="createForm.roleIds" multiple placeholder="请选择分配角色" style="width:100%">
-            <el-option label="物流商户协同员 (ROLE_MERCHANT)" :value="2" />
-            <el-option label="无人机商用机长 (ROLE_PILOT)" :value="4" />
-            <el-option label="场站运维专员 (ROLE_MAINTAINER)" :value="5" />
+            <el-option label="商户客服专员 (ROLE_CS - 负责客户服务工单与跟进答复)" :value="8" />
+            <el-option label="商户调度员 (ROLE_DISPATCHER - 负责接单与航线规划)" :value="7" />
+            <el-option label="物流商户协同员 (ROLE_MERCHANT - 企业主协同管理)" :value="2" />
+            <el-option label="无人机商用机长 (ROLE_PILOT - 移动端执飞)" :value="4" />
+            <el-option label="场站运维专员 (ROLE_MAINTAINER - 设施巡检与维保)" :value="5" />
           </el-select>
         </el-form-item>
       </el-form>

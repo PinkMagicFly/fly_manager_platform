@@ -50,4 +50,12 @@ public class UamAccount extends BaseEntity {
 
     /** 最后登录IP */
     private String lastLoginIp;
+
+    /** 拥有的岗位角色中文名称列表 (非持久化展示字段) */
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private java.util.List<String> roleNames;
+
+    /** 拥有的角色代码列表 (非持久化展示字段) */
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private java.util.List<String> roleCodes;
 }

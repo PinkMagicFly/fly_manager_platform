@@ -5,6 +5,7 @@ import com.fly.platform.ticket.dto.TicketAssignDTO;
 import com.fly.platform.ticket.dto.TicketCloseDTO;
 import com.fly.platform.ticket.dto.TicketCreateDTO;
 import com.fly.platform.ticket.dto.TicketReplyDTO;
+import com.fly.platform.ticket.vo.TicketAssigneeVO;
 import com.fly.platform.ticket.vo.TicketVO;
 
 import java.util.List;
@@ -58,6 +59,13 @@ public interface ServiceTicketService {
      * @param dto 分派入参
      */
     void assign(Long id, TicketAssignDTO dto);
+
+    /**
+     * 获取可供分派的客服专员列表
+     *
+     * @return 客服专员列表
+     */
+    List<TicketAssigneeVO> getAvailableAssignees();
 
     /**
      * 回复工单
