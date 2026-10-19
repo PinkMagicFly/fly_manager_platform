@@ -67,6 +67,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/admin/SysParamView.vue'),
         meta: { title: '系统参数配置中枢' }
       },
+      {
+        path: 'admin/accounts',
+        name: 'AccountManage',
+        component: () => import('@/views/admin/AccountManageView.vue'),
+        meta: { title: '空管与平台账号管理' }
+      },
 
       {
         path: 'asset/uav',

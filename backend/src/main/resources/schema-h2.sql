@@ -395,5 +395,25 @@ CREATE TABLE service_ticket (
   is_deleted TINYINT NOT NULL DEFAULT 0
 );
 
+-- 24. 客户常用地址簿表 (customer_address)
+DROP TABLE IF EXISTS customer_address;
+CREATE TABLE customer_address (
+  address_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  customer_id BIGINT NOT NULL,
+  contact_name VARCHAR(64) NOT NULL,
+  contact_phone VARCHAR(20) NOT NULL,
+  province VARCHAR(40) NOT NULL,
+  city VARCHAR(40) NOT NULL,
+  district VARCHAR(40) NOT NULL,
+  street VARCHAR(60) NOT NULL,
+  lng DECIMAL(10,6) NOT NULL,
+  lat DECIMAL(10,6) NOT NULL,
+  detail VARCHAR(120) NOT NULL,
+  is_default TINYINT DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  is_deleted TINYINT NOT NULL DEFAULT 0
+);
+
 
 

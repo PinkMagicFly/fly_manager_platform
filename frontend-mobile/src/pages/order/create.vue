@@ -14,8 +14,11 @@
         <!-- 寄件端结构化输入 -->
         <view class="addr-block">
           <view class="addr-header">
-            <text class="badge bg-green">起</text>
-            <text class="addr-label">寄件投递点</text>
+            <view class="addr-title-group">
+              <text class="badge bg-green">起</text>
+              <text class="addr-label">寄件投递点</text>
+            </view>
+            <text class="btn-address-book" @click="openAddressSelector('sender')">📍 从地址簿选择</text>
           </view>
           <view class="region-selector-row">
             <RegionCascader
@@ -38,8 +41,11 @@
         <!-- 收件端结构化输入 -->
         <view class="addr-block" style="margin-top: 14px">
           <view class="addr-header">
-            <text class="badge bg-orange">止</text>
-            <text class="addr-label">收件目的地</text>
+            <view class="addr-title-group">
+              <text class="badge bg-orange">止</text>
+              <text class="addr-label">收件目的地</text>
+            </view>
+            <text class="btn-address-book" @click="openAddressSelector('receiver')">📍 从地址簿选择</text>
           </view>
           <view class="region-selector-row">
             <RegionCascader
@@ -110,16 +116,53 @@
       </view>
       <button class="pay-btn" :loading="submitting" @click="handleCreateAndPay">立即模拟支付并下单</button>
     </view>
+
+    <!-- 常用地址快速选择弹窗 -->
+    <view v-if="addressModalVisible" class="addr-modal-mask" @click="addressModalVisible = false">
+      <view class="addr-modal-content" @click.stop>
+        <view class="addr-modal-header">
+          <text class="addr-modal-title">从地址簿选择{{ selectTarget === 'sender' ? '寄件' : '收件' }}地址</text>
+          <text class="addr-modal-close" @click="addressModalVisible = false">✕</text>
+        </view>
+        <scroll-view scroll-y class="addr-modal-scroll">
+          <view v-if="addressBookList.length === 0" class="addr-empty">
+            <text class="empty-txt">地址簿暂无保存的地址</text>
+            <text class="link-manage" @click="navToManageAddress">去新建常用地址 ›</text>
+          </view>
+          <view
+            v-for="item in addressBookList"
+            :key="item.addressId"
+            class="addr-select-item"
+            @click="applySelectedAddress(item)"
+          >
+            <view class="item-top">
+              <text class="item-name">{{ item.contactName }}</text>
+              <text class="item-phone">{{ item.contactPhone }}</text>
+              <text v-if="item.isDefault === 1" class="tag-default">默认</text>
+            </view>
+            <view class="item-detail">{{ item.fullAddress }}</view>
+          </view>
+        </scroll-view>
+        <view class="addr-modal-footer">
+          <button class="btn-manage-addr" @click="navToManageAddress">管理常用地址簿</button>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import request from '../../utils/request'
 import RegionCascader from '../../components/RegionCascader.vue'
 
 const submitting = ref(false)
 const feeResult = ref<any>(null)
+
+const addressModalVisible = ref(false)
+const selectTarget = ref<'sender' | 'receiver'>('sender')
+const addressBookList = ref<any[]>([])
 
 const senderRegionText = ref('广东省深圳市南山区粤海街道')
 const senderDetail = ref('科技南十二路28号康佳研发大厦A座')
@@ -263,12 +306,59 @@ const handleCreateAndPay = async () => {
   }
 }
 
+const openAddressSelector = async (target: 'sender' | 'receiver') => {
+  selectTarget.value = target
+  try {
+    const res: any = await request.get('/api/v1/customer/address/list')
+    addressBookList.value = Array.isArray(res) ? res : []
+  } catch (e) {
+    addressBookList.value = []
+  }
+  addressModalVisible.value = true
+}
+
+const applySelectedAddress = (addr: any) => {
+  if (selectTarget.value === 'sender') {
+    senderRegionText.value = addr.fullRegionText || `${addr.province} ${addr.city} ${addr.district} ${addr.street}`
+    senderDetail.value = addr.detail
+    form.senderLng = Number(addr.lng)
+    form.senderLat = Number(addr.lat)
+    updateSenderCombined()
+  } else {
+    receiverRegionText.value = addr.fullRegionText || `${addr.province} ${addr.city} ${addr.district} ${addr.street}`
+    receiverDetail.value = addr.detail
+    form.receiverLng = Number(addr.lng)
+    form.receiverLat = Number(addr.lat)
+    updateReceiverCombined()
+  }
+  addressModalVisible.value = false
+  triggerFeeCalc()
+  uni.showToast({ title: `已选用${selectTarget.value === 'sender' ? '寄件' : '收件'}地址`, icon: 'success' })
+}
+
+const navToManageAddress = () => {
+  addressModalVisible.value = false
+  uni.navigateTo({ url: `/pages/address/list?mode=select&target=${selectTarget.value}` })
+}
+
 const goBack = () => { uni.navigateBack() }
 
 onMounted(() => {
   updateSenderCombined()
   updateReceiverCombined()
   triggerFeeCalc()
+})
+
+onShow(() => {
+  const selected = uni.getStorageSync('selected_customer_address')
+  if (selected) {
+    try {
+      const data = JSON.parse(selected)
+      selectTarget.value = data.target
+      applySelectedAddress(data.address)
+      uni.removeStorageSync('selected_customer_address')
+    } catch (e) {}
+  }
 })
 </script>
 
@@ -282,7 +372,9 @@ onMounted(() => {
 .card-box { background: #fff; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
 .card-title { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 10px; }
 .addr-block { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; }
-.addr-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.addr-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.addr-title-group { display: flex; align-items: center; gap: 6px; }
+.btn-address-book { font-size: 12px; color: #0284c7; background: #e0f2fe; padding: 3px 8px; border-radius: 4px; font-weight: bold; cursor: pointer; }
 .addr-label { font-size: 13px; font-weight: 700; color: #0f172a; }
 .region-selector-row { margin-bottom: 8px; }
 .detail-input { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 10px; height: 38px; line-height: 38px; font-size: 13px; color: #0f172a; width: 100%; box-sizing: border-box; }
@@ -312,4 +404,51 @@ onMounted(() => {
 .price-box .lbl { font-size: 12px; color: #64748b; }
 .price-box .val { font-size: 20px; font-weight: 800; color: #ef4444; }
 .pay-btn { background: #0284c7; color: #fff; font-size: 14px; font-weight: bold; padding: 0 18px; border-radius: 20px; margin: 0; }
+
+/* 常用地址选择模态框 */
+.addr-modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: flex-end;
+  z-index: 999;
+}
+.addr-modal-content {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 16px 16px 0 0;
+  padding: 16px 18px 24px;
+  box-sizing: border-box;
+}
+.addr-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.addr-modal-title { font-size: 16px; font-weight: bold; color: #0f172a; }
+.addr-modal-close { font-size: 18px; color: #94a3b8; padding: 4px 8px; cursor: pointer; }
+.addr-modal-scroll { max-height: 280px; }
+.addr-empty { text-align: center; padding: 30px 0; color: #94a3b8; font-size: 13px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.link-manage { color: #0284c7; text-decoration: underline; font-weight: bold; }
+.addr-select-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+.addr-select-item:active { background: #f0f9ff; border-color: #0284c7; }
+.item-top { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.item-name { font-size: 14px; font-weight: bold; color: #0f172a; }
+.item-phone { font-size: 12px; color: #64748b; }
+.tag-default { background: #e0f2fe; color: #0284c7; font-size: 10px; font-weight: bold; padding: 1px 5px; border-radius: 4px; }
+.item-detail { font-size: 12px; color: #334155; line-height: 1.4; }
+.addr-modal-footer { margin-top: 12px; }
+.btn-manage-addr { background: #f1f5f9; color: #475569; font-size: 13px; border-radius: 8px; }
 </style>

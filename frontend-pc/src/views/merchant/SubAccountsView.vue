@@ -75,9 +75,8 @@
         </el-form-item>
         <el-form-item label="岗位角色" prop="roleIds">
           <el-select v-model="createForm.roleIds" multiple placeholder="请选择分配角色" style="width:100%">
-            <el-option label="商户客服专员 (ROLE_CS - 负责客户服务工单与跟进答复)" :value="8" />
             <el-option label="商户调度员 (ROLE_DISPATCHER - 负责接单与航线规划)" :value="7" />
-            <el-option label="物流商户协同员 (ROLE_MERCHANT - 企业主协同管理)" :value="2" />
+            <el-option label="商户客服专员 (ROLE_CS - 负责客户服务工单与跟进答复)" :value="8" />
             <el-option label="无人机商用机长 (ROLE_PILOT - 移动端执飞)" :value="4" />
             <el-option label="场站运维专员 (ROLE_MAINTAINER - 设施巡检与维保)" :value="5" />
           </el-select>
@@ -108,7 +107,7 @@ const createForm = reactive({
   mobile: '',
   email: '',
   password: '123456',
-  roleIds: [2]
+  roleIds: [7]
 })
 
 const rules = {
@@ -141,7 +140,7 @@ const openCreateDialog = () => {
   createForm.mobile = ''
   createForm.email = ''
   createForm.password = '123456'
-  createForm.roleIds = [2]
+  createForm.roleIds = [7]
   dialogVisible.value = true
 }
 

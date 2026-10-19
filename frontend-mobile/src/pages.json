@@ -56,6 +56,14 @@
       }
     },
     {
+      "path": "pages/address/list",
+      "style": {
+        "navigationBarTitleText": "常用寄收地址簿",
+        "navigationBarBackgroundColor": "#0284c7",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
       "path": "pages/order/create",
       "style": {
         "navigationBarTitleText": "低空寄件在线下单",

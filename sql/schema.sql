@@ -545,4 +545,26 @@ resp_status INT NOT NULL DEFAULT 200 COMMENT '业务执行响应状态码',
   KEY idx_audit_module (module_name, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='敏感业务与核心操作全局审计日志表';
 
+-- 28. 客户常用地址簿表 (customer_address)
+DROP TABLE IF EXISTS customer_address;
+CREATE TABLE customer_address (
+  address_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '地址唯一标识',
+  customer_id BIGINT UNSIGNED NOT NULL COMMENT '归属客户账户ID',
+  contact_name VARCHAR(64) NOT NULL COMMENT '联系人姓名',
+  contact_phone VARCHAR(20) NOT NULL COMMENT '联系人手机号',
+  province VARCHAR(40) NOT NULL COMMENT '所属省份',
+  city VARCHAR(40) NOT NULL COMMENT '所属城市',
+  district VARCHAR(40) NOT NULL COMMENT '所属区县',
+  street VARCHAR(60) NOT NULL COMMENT '所属街道/乡镇',
+  lng DECIMAL(10,6) NOT NULL COMMENT '地图选点经度',
+  lat DECIMAL(10,6) NOT NULL COMMENT '地图选点纬度',
+  detail VARCHAR(120) NOT NULL COMMENT '楼栋门牌详细地址',
+  is_default TINYINT NOT NULL DEFAULT 0 COMMENT '是否为默认地址：0-否 1-是',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '记录创建时间',
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '记录最后更新时间',
+  is_deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除标记：0-正常 1-已删除',
+  PRIMARY KEY (address_id),
+  KEY idx_customer (customer_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='客户常用地址簿管理表';
+
 SET FOREIGN_KEY_CHECKS = 1;

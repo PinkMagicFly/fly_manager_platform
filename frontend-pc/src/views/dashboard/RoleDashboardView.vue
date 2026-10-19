@@ -61,6 +61,9 @@
             <el-button v-if="isAdmin" type="success" plain @click="$router.push('/admin/customer-audit')">
               <el-icon><CreditCard /></el-icon> 客户实名授信
             </el-button>
+            <el-button v-if="isAdmin" type="warning" plain @click="$router.push('/admin/accounts')">
+              <el-icon><Compass /></el-icon> 空管账号管理
+            </el-button>
             <el-button v-if="isAdmin" type="info" plain @click="$router.push('/admin/audit-logs')">
               <el-icon><Document /></el-icon> 全局审计日志
             </el-button>

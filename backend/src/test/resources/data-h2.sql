@@ -48,6 +48,12 @@ INSERT INTO base_site (site_id, site_code, site_name, site_geo, capacity, occupi
 (3, 'SITE-SZ-003', '龙岗大运智慧物流换电场站', '114.218,22.695', 8, 3, 1),
 (4, 'SITE-SZ-004', '盐田港综合保税区中转场站', '114.265,22.578', 4, 0, 1);
 
+-- 客户常用地址簿数据
+INSERT INTO customer_address (address_id, customer_id, contact_name, contact_phone, province, city, district, street, lng, lat, detail, is_default) VALUES
+(1, 6, '陈总监', '13800000006', '广东省', '深圳市', '南山区', '粤海街道', 113.943000, 22.540000, '科技南十二路28号康佳研发大厦A座18层低空接驳站', 1),
+(2, 6, '李经理', '13800000066', '广东省', '深圳市', '福田区', '莲花街道', 114.062000, 22.553000, '皇岗路5001号深业上城南区B座顶层停机坪', 0);
+
+
 -- 无人机台账 (uav_info)
 INSERT INTO uav_info (uav_id, uav_sn, model, merchant_id, max_load, max_range_km, battery_pct, health_score, fly_hours, state, home_site_id) VALUES
 (1, 'UAV-FY90-001', '顺丰丰舟-90 (垂起固定翼)', 1, 20.00, 65.0, 92, 98, 142, 0, 1),

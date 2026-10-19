@@ -178,7 +178,7 @@
     <!-- 4. 【客户/商户通用视角】 -->
     <view v-else class="role-view-block">
       <view class="section-title">{{ isCustomer ? '企业低空寄件与信用授信' : '商户机队运营概览' }}</view>
-      <view class="action-grid" v-if="isCustomer">
+      <view class="action-grid customer-action-grid" v-if="isCustomer">
         <view class="action-card bg-sky" @click="navTo('/pages/order/create')">
           <text class="icon">🚀</text>
           <text class="act-name">在线寄件下单</text>
@@ -189,12 +189,16 @@
           <text class="act-name">我的物流运单</text>
           <text class="act-tip">查看在途轨迹与签收</text>
         </view>
+        <view class="action-card bg-purple" @click="navTo('/pages/address/list')">
+          <text class="icon">📍</text>
+          <text class="act-name">常用地址簿</text>
+          <text class="act-tip">寄收地址一键管理</text>
+        </view>
         <view class="action-card bg-amber" @click="navTo('/pages/ticket/mine')">
           <text class="icon">🎧</text>
-          <text class="act-name">客户服务与工单</text>
+          <text class="act-name">客户服务工单</text>
           <text class="act-tip">发起咨询与投诉跟踪</text>
         </view>
-
       </view>
 
       <view class="content-card">
@@ -782,8 +786,14 @@ onHide(() => {
 }
 .bg-sky { background: linear-gradient(135deg, #0284c7, #0369a1); }
 .bg-emerald { background: linear-gradient(135deg, #10b981, #059669); }
+.bg-purple { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
 .bg-amber { background: linear-gradient(135deg, #f59e0b, #d97706); }
 .bg-rose { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.customer-action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
 .action-card .icon { font-size: 20px; margin-bottom: 4px; }
 .act-name { font-size: 13px; font-weight: bold; }
 .act-tip { font-size: 10px; opacity: 0.85; margin-top: 2px; }

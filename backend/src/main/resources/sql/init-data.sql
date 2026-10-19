@@ -256,4 +256,10 @@ INSERT INTO fly_trace (trace_id, apply_id, uav_id, point_geo, altitude, speed, b
 (5, 1, 2, ST_GeomFromText('POINT(114.000000 22.545000)'), 103.00, 12.40, 91, DATE_SUB(NOW(), INTERVAL 3 MINUTE), NOW()),
 (6, 1, 2, ST_GeomFromText('POINT(114.015000 22.546500)'), 102.00, 12.50, 90, NOW(), NOW());
 
+-- 19. 初始化客户常用地址簿表 (customer_address)
+TRUNCATE TABLE customer_address;
+INSERT INTO customer_address (address_id, customer_id, contact_name, contact_phone, province, city, district, street, lng, lat, detail, is_default, created_at, updated_at) VALUES
+(1, 6, '陈总监', '13800000006', '广东省', '深圳市', '南山区', '粤海街道', 113.943000, 22.540000, '科技南十二路28号康佳研发大厦A座18层低空接驳站', 1, NOW(), NOW()),
+(2, 6, '李经理', '13800000066', '广东省', '深圳市', '福田区', '莲花街道', 114.062000, 22.553000, '皇岗路5001号深业上城南区B座顶层停机坪', 0, NOW(), NOW());
+
 SET FOREIGN_KEY_CHECKS = 1;

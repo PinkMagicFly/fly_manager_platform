@@ -107,6 +107,7 @@
             <el-icon><Setting /></el-icon>
             <span>平台治理与配置</span>
           </template>
+          <el-menu-item index="/admin/accounts">空管与平台账号管理</el-menu-item>
           <el-menu-item index="/admin/params">系统运行参数配置</el-menu-item>
         </el-sub-menu>
 
