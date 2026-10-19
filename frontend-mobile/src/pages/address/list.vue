@@ -56,8 +56,9 @@
     </view>
 
     <!-- 新建/编辑地址弹窗 -->
-    <view v-if="dialogVisible" class="modal-mask" @click="dialogVisible = false">
-      <view class="modal-content" @click.stop>
+    <view v-if="dialogVisible" class="modal-wrapper">
+      <view class="modal-mask" @click="dialogVisible = false"></view>
+      <view class="modal-content">
         <view class="modal-header">
           <text class="modal-title">{{ editId ? '编辑常用地址' : '新增常用地址' }}</text>
           <text class="modal-close" @click="dialogVisible = false">✕</text>
@@ -65,17 +66,30 @@
 
         <view class="form-body">
           <view class="form-item">
-            <text class="form-label">联系人姓名</text>
-            <input v-model="form.contactName" class="form-input" placeholder="如：张经理 / 业务部" />
+            <text class="form-label">联系人姓名 <text class="req-star">*</text></text>
+            <input
+              v-model="form.contactName"
+              type="text"
+              class="form-input"
+              placeholder="请输入联系人姓名 (如：张经理)"
+              @input="onNameInput"
+            />
           </view>
 
           <view class="form-item">
-            <text class="form-label">联系人电话</text>
-            <input v-model="form.contactPhone" type="number" class="form-input" placeholder="11位手机号码" />
+            <text class="form-label">联系人电话 <text class="req-star">*</text></text>
+            <input
+              v-model="form.contactPhone"
+              type="text"
+              class="form-input"
+              placeholder="请输入11位手机号码"
+              maxlength="11"
+              @input="onPhoneInput"
+            />
           </view>
 
           <view class="form-item">
-            <text class="form-label">省/市/区/街道</text>
+            <text class="form-label">省/市/区/街道 <text class="req-star">*</text></text>
             <RegionCascader
               v-model="regionText"
               placeholder="点击选择所在行政区与街道"
@@ -84,8 +98,14 @@
           </view>
 
           <view class="form-item">
-            <text class="form-label">详细楼栋门牌地址</text>
-            <input v-model="form.detail" class="form-input" placeholder="如：科技南十二路28号A座18层" />
+            <text class="form-label">详细楼栋门牌地址 <text class="req-star">*</text></text>
+            <input
+              v-model="form.detail"
+              type="text"
+              class="form-input"
+              placeholder="如：科技南十二路28号A座18层"
+              @input="onDetailInput"
+            />
           </view>
 
           <view class="form-item-switch">
@@ -147,6 +167,18 @@ const loadAddresses = async () => {
   } catch (e) {
     addressList.value = []
   }
+}
+
+const onNameInput = (e: any) => {
+  form.contactName = e.detail?.value || ''
+}
+
+const onPhoneInput = (e: any) => {
+  form.contactPhone = e.detail?.value || ''
+}
+
+const onDetailInput = (e: any) => {
+  form.detail = e.detail?.value || ''
 }
 
 const onRegionChange = (info: any) => {
@@ -413,23 +445,36 @@ onLoad((options: any) => {
   border: none;
 }
 
-.modal-mask {
+.modal-wrapper {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.5);
+  z-index: 9999;
   display: flex;
-  align-items: flex-end;
-  z-index: 999;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.modal-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10000;
 }
 .modal-content {
+  position: relative;
+  z-index: 10001;
   width: 100%;
   background: #ffffff;
   border-radius: 16px 16px 0 0;
   padding: 16px 20px 24px;
   box-sizing: border-box;
+  max-height: 85vh;
+  overflow-y: auto;
 }
 .modal-header {
   display: flex;
@@ -451,12 +496,29 @@ onLoad((options: any) => {
   gap: 6px;
 }
 .form-label { font-size: 12px; color: #475569; }
+.req-star { color: #ef4444; font-weight: bold; }
 .form-input {
-  background: #f1f5f9;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 13px;
+  padding: 0 12px;
+  height: 42px;
+  line-height: 42px;
+  font-size: 14px;
   color: #0f172a;
+  width: 100%;
+  box-sizing: border-box;
+}
+.form-input:focus {
+  border-color: #0284c7;
+  background: #ffffff;
+}
+:deep(.form-input .uni-input-input),
+.form-input :deep(input) {
+  height: 42px !important;
+  line-height: 42px !important;
+  font-size: 14px !important;
+  color: #0f172a !important;
 }
 .form-item-switch {
   display: flex;

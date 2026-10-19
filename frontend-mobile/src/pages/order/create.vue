@@ -118,8 +118,9 @@
     </view>
 
     <!-- 常用地址快速选择弹窗 -->
-    <view v-if="addressModalVisible" class="addr-modal-mask" @click="addressModalVisible = false">
-      <view class="addr-modal-content" @click.stop>
+    <view v-if="addressModalVisible" class="addr-modal-wrapper">
+      <view class="addr-modal-mask" @click="addressModalVisible = false"></view>
+      <view class="addr-modal-content">
         <view class="addr-modal-header">
           <text class="addr-modal-title">从地址簿选择{{ selectTarget === 'sender' ? '寄件' : '收件' }}地址</text>
           <text class="addr-modal-close" @click="addressModalVisible = false">✕</text>
@@ -406,18 +407,29 @@ onShow(() => {
 .pay-btn { background: #0284c7; color: #fff; font-size: 14px; font-weight: bold; padding: 0 18px; border-radius: 20px; margin: 0; }
 
 /* 常用地址选择模态框 */
-.addr-modal-mask {
+.addr-modal-wrapper {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.5);
+  z-index: 9999;
   display: flex;
-  align-items: flex-end;
-  z-index: 999;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.addr-modal-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10000;
 }
 .addr-modal-content {
+  position: relative;
+  z-index: 10001;
   width: 100%;
   background: #ffffff;
   border-radius: 16px 16px 0 0;
